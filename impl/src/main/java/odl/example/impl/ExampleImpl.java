@@ -23,10 +23,6 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.Future;
 
-
-/**
- * Created by geopet on 26/5/2016.
- */
 public class ExampleImpl implements OdlexampleService {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
@@ -59,7 +55,14 @@ public class ExampleImpl implements OdlexampleService {
                 DomainNode sourceNode = domainNodes.get(input.getSrcNode());
                 DomainNode destNode = domainNodes.get(input.getDstNode());
 
-                List<GraphPath<Integer, DomainLink>> allPossiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+                List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+                if (possiblePaths.size() == 2){
+                    GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
+                    GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
+
+                    SwitchConfigurator switchConfigurator = new SwitchConfigurator();
+                    switchConfigurator.configureSwitches(sourceNode, input.getSrcMAC(), mainPath.getEdgeList(), failoverPath.getEdgeList());
+                }
             }
         }
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
@@ -75,9 +78,9 @@ public class ExampleImpl implements OdlexampleService {
 
             //      AllDirectedPaths allGraphPaths = new AllDirectedPaths(graph);
             //      List<GraphPath<Integer, DomainLink>> allPossiblePaths = allGraphPaths.getAllPaths(sourceNode, destNode, true, Integer.MAX_VALUE);
-            for (GraphPath<Integer, DomainLink> graphPath : graphPaths) {
-                System.out.println("Path: " + graphPath.getEdgeList());
-            }
+//            for (GraphPath<Integer, DomainLink> graphPath : graphPaths) {
+//                System.out.println("Path: " + graphPath.getEdgeList());
+//            }
             return graphPaths;
         } else {
             System.out.println("Graph was null.");

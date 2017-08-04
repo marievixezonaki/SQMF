@@ -21,9 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Created by geopet on 04/06/16.
- */
 public class TopologyListener implements DataChangeListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(TopologyListener.class);

@@ -14,9 +14,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by maxez on 2/8/2017.
- */
 public class GraphOperations {
 
     /**
@@ -97,7 +94,7 @@ public class GraphOperations {
         if (!graph.getDomainNodes().containsKey(node.getValue())) {
             domainNode = new DomainNode();
             domainNode.setODLNodeID(node.getValue());
-        //    graph.addNode(node.getValue(), domainNode);
+            graph.addNode(node.getValue(), domainNode);
         } else {
             domainNode = (DomainNode) graph.getDomainNodes().get(node.getValue());
         }
@@ -124,7 +121,7 @@ public class GraphOperations {
                 if (graph.getGraphLinks()!= null){
                     if (graph.getGraphLinks().contains(link)) {
                         graph.getGraphLinks().remove(link);
-               //         graph.removeEdge(link.getSource().getSourceNode(), link.getDestination().getDestNode());
+                        graph.removeEdge(link.getSource().getSourceNode(), link.getDestination().getDestNode());
                     }
                 }
             }

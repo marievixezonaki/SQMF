@@ -14,9 +14,6 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import java.util.Hashtable;
 import java.util.List;
 
-/**
- * Created by theovas on 7/4/2017.
- */
 public class NetworkGraph<T, E> extends SimpleDirectedWeightedGraph<T, E> {
     public static int graphIDCounter = 0;
     private int graphID = -1;
