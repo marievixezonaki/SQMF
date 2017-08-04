@@ -30,6 +30,17 @@ module odlexample-impl {
                     }
                 }
             }
+
+            container notification-service {
+                uses config:service-ref {
+                  refine type {
+                    mandatory false;
+                    config:required-identity md-sal-binding:binding-notification-service;
+                  }
+               }
+            }
+
+
         }
     }
 }

@@ -7,61 +7,21 @@ module odlexample {
         description "Initial revision of odlexample model";
     }
     
-    rpc addApplication {
-        input {
-            leaf appId {
-                type int32;
+    rpc startFailover {
+        input{
+            leaf srcNode {
+                type string;
             }
-            leaf bandwidth {
-                type decimal64{
-                    fraction-digits 4;
-                }
+            leaf dstNode {
+                type string;
             }
-            leaf packetLoss {
-                type decimal64{
-                    fraction-digits 4;
-                }
+            leaf proactiveFF{
+                type boolean;
             }
-            leaf packetDelay {
-                type decimal64{
-                    fraction-digits 4;
-                }
-            }
-            leaf jitter {
-                type decimal64{
-                    fraction-digits 4;
-                }
+            leaf reactiveFF{
+                type boolean;
             }
         }
     }
-    
-    container application-registry {
-            list application-registry-entry {
-                key "appId";
 
-                leaf appId {
-                    type int32;
-                }
-                leaf packetLoss {
-                    type decimal64{
-                        fraction-digits 4;
-                    }
-                }
-                leaf packetDelay {
-                    type decimal64{
-                        fraction-digits 4;
-                    }
-                }
-                leaf jitter {
-                    type decimal64{
-                        fraction-digits 4;
-                    }
-                }
-                leaf bandwidth {
-                	type decimal64{
-                    	fraction-digits 4;
-                }
-            }
-            }
-    }
 }
