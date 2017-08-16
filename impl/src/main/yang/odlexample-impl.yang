@@ -30,7 +30,6 @@ module odlexample-impl {
                     }
                 }
             }
-
             container notification-service {
                 uses config:service-ref {
                   refine type {

@@ -32,7 +32,8 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
     <bundle>mvn:org.opendaylight.controller.thirdparty/net.sf.jung2/2.0.1</bundle>
     <bundle>mvn:org.jgrapht/jgrapht-core/1.0.1</bundle>
     <bundle>mvn:odl.example/odlexample-impl/{{VERSION}}</bundle>
-    <configfile finalname="${configfile.directory}/odlexample.xml">mvn:odl.example/odlexample-impl/{{VERSION}}/xml/config</configfile>
+    <configfile finalname="${configfile.directory}/
+    odlexample.xml">mvn:odl.example/odlexample-impl/{{VERSION}}/xml/config</configfile>
   </feature>
   <feature name='odl-odlexample-rest' version='${project.version}' description='OpenDaylight :: odlexample :: REST'>
     <feature version="${project.version}">odl-odlexample</feature>

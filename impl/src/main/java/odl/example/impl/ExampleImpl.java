@@ -12,6 +12,7 @@ import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.*;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;;
@@ -28,8 +29,15 @@ public class ExampleImpl implements OdlexampleService {
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
     private DijkstraShortestPath<NodeId, Link> shortestPath = null;
     private BindingAwareBroker.ProviderContext session;
+    private HashMap<String, Integer> inputPorts = new HashMap<>();
+    private HashMap<String, Integer> outputPorts = new HashMap<>();
+    private HashMap<String, Integer> failoverPorts = new HashMap<>();
+    private HashMap<String, Integer> inputPortsFailover = new HashMap<>();
+    private HashMap<String, Integer> outputPortsFailover = new HashMap<>();
+    private DataBroker db;
 
-    public ExampleImpl(BindingAwareBroker.ProviderContext session) {
+    public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db) {
+        this.db = db;
         this.session = session;
     }
 
@@ -50,7 +58,7 @@ public class ExampleImpl implements OdlexampleService {
         }
 
         if (input.getSrcNode() != null && input.getDstNode() != null) {
-            if (NetworkGraph.getInstance().getGraphNodes() != null /*&& NetworkGraph.getInstance().getGraphLinks() != null*/) {
+            if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
                 Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
                 DomainNode sourceNode = domainNodes.get(input.getSrcNode());
                 DomainNode destNode = domainNodes.get(input.getDstNode());
@@ -60,8 +68,45 @@ public class ExampleImpl implements OdlexampleService {
                     GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
                     GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
 
-                    SwitchConfigurator switchConfigurator = new SwitchConfigurator();
-                    switchConfigurator.configureSwitches(sourceNode, input.getSrcMAC(), mainPath.getEdgeList(), failoverPath.getEdgeList());
+                    //find in and out ports for nodes of main path
+                    for (DomainLink link : mainPath.getEdgeList()){
+                        inputPorts.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
+                        outputPorts.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
+                        failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+
+                    }
+                    //find in port for ingress node and out port for egress node, for main path
+                    if (!inputPorts.containsKey(sourceNode.getODLNodeID()) || !outputPorts.containsKey(destNode.getODLNodeID())) {
+                        findPortsForIngressAndEgressNodes(sourceNode, destNode);
+                    }
+
+                    //find failover ports for nodes of main path
+                    for (DomainLink link : mainPath.getEdgeList()){
+                        failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+                    }
+                    failoverPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(failoverPath.getEdgeList().get(0).getLink().getSource().getSourceTp().getValue().split(":")[2]));
+
+                    //find in and out ports for nodes of failover path
+                    for (DomainLink link : failoverPath.getEdgeList()){
+                        inputPortsFailover.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
+                        outputPortsFailover.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
+
+                    }
+                    inputPortsFailover.put(sourceNode.getODLNodeID(), inputPorts.get(sourceNode.getODLNodeID()));
+                    outputPortsFailover.put(destNode.getODLNodeID(), outputPorts.get(destNode.getODLNodeID()));
+
+                    //have to print out an in port and an out port for all nodes of main path
+          //          System.out.println("Inports " + inputPorts.toString());
+         //           System.out.println("Outports " + outputPorts.toString());
+          //          System.out.println("Failoverports " + failoverPorts.toString());
+
+            //        System.out.println("Inports " + inputPortsFailover.toString());
+            //        System.out.println("Outports " + outputPortsFailover.toString());
+
+                    SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+                    switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
+                    switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
+                    switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
                 }
             }
         }
@@ -87,4 +132,37 @@ public class ExampleImpl implements OdlexampleService {
             return null;
         }
     }
+
+    private void findPortsForIngressAndEgressNodes(DomainNode sourceNode, DomainNode destNode){
+        List<Link> graphLinks = NetworkGraph.getInstance().getGraphLinks();
+
+        for (Link graphLink : graphLinks){
+            if (graphLink.getLinkId().getValue().contains("host")){
+                if (graphLink.getLinkId().getValue().contains(destNode.getODLNodeID())){
+                    String[] firstSplit = graphLink.getLinkId().getValue().split("\\/");
+                    if (firstSplit[0].contains("openflow")) {
+                        String[] secondSplit = firstSplit[0].split("openflow:");
+                        outputPorts.put(destNode.getODLNodeID(), Integer.parseInt(secondSplit[1].split(":")[1]));
+                    }
+                    else if (firstSplit[1].contains("openflow")){
+                        String[] secondSplit = firstSplit[1].split("openflow:");
+                        outputPorts.put(destNode.getODLNodeID(), Integer.parseInt(secondSplit[1].split(":")[1]));
+                    }
+                }
+                else if (graphLink.getLinkId().getValue().contains(sourceNode.getODLNodeID())){
+                    String[] firstSplit = graphLink.getLinkId().getValue().split("\\/");
+                    if (firstSplit[0].contains("openflow")) {
+                        String[] secondSplit = firstSplit[0].split("openflow:");
+                        inputPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(secondSplit[1].split(":")[1]));
+                    }
+                    else if (firstSplit[1].contains("openflow")){
+                        String[] secondSplit = firstSplit[1].split("openflow:");
+                        inputPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(secondSplit[1].split(":")[1]));
+                    }
+                }
+            }
+        }
+
+    }
+
 }

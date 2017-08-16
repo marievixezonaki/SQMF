@@ -29,9 +29,11 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
     private BindingAwareBroker.RpcRegistration<OdlexampleService> exampleService;
     private NotificationProviderService notificationService;
+    private DataBroker db;
 
     public ExampleProvider(NotificationProviderService notificationProviderService){
         this.notificationService = notificationService;
+        this.db = db;
     }
 
     @Override
@@ -49,7 +51,7 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
                 AsyncDataBroker.DataChangeScope.BASE);
         System.out.println("Topology Listener set");
 
-        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session));
+        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db));
     }
 
     @Override

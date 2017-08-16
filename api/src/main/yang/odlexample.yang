@@ -15,9 +15,6 @@ module odlexample {
             leaf dstNode {
                 type string;
             }
-            leaf srcMAC{
-                type string;
-            }
             leaf proactiveFF{
                 type boolean;
             }

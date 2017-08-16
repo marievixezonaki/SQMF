@@ -6,7 +6,10 @@
 package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.impl.rev141210;
 
 import odl.example.impl.ExampleProvider;
+import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
+
+import javax.xml.crypto.Data;
 
 public class ExampleModule extends org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.impl.rev141210.AbstractExampleModule {
     public ExampleModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
@@ -27,6 +30,7 @@ public class ExampleModule extends org.opendaylight.yang.gen.v1.urn.opendaylight
 
         NotificationProviderService notificationService = getNotificationServiceDependency();
 
+      //  DataBroker db = getDataBrokerDependency();
         ExampleProvider provider = new ExampleProvider(notificationService);
         getBrokerDependency().registerProvider(provider);
         return provider;
