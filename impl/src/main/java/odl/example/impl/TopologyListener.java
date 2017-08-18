@@ -72,6 +72,10 @@ public class TopologyListener implements DataChangeListener {
                 }
             }
             graphOperations.removeFromGraph(NetworkGraph.getInstance(), linkList);
+
+            if (ExampleImpl.reactiveFF){
+                ExampleImpl.implementReactiveFailover(linkList);
+            }
         }
     }
 

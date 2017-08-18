@@ -35,6 +35,11 @@ public class ExampleImpl implements OdlexampleService {
     private HashMap<String, Integer> inputPortsFailover = new HashMap<>();
     private HashMap<String, Integer> outputPortsFailover = new HashMap<>();
     private DataBroker db;
+    public boolean proactiveFF = false;
+    public static boolean reactiveFF = false;
+    public static String srcNode = null;
+    public static String dstNode = null;
+    public static GraphPath<Integer, DomainLink> path;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db) {
         this.db = db;
@@ -44,21 +49,24 @@ public class ExampleImpl implements OdlexampleService {
     @Override
     public Future<RpcResult<Void>> startFailover(StartFailoverInput input) {
         LOG.info("Configuring switches for resilience.");
-        if (input != null) {
+        if (input != null && input.isProactiveFF() != null && input.isReactiveFF() != null) {
             if (input.isProactiveFF() && input.isReactiveFF()) {
                 LOG.info("Both choices selected. Failover will be proactive.");
+                proactiveFF = true;
             } else if (input.isProactiveFF()) {
                 LOG.info("Failover will be proactive.");
+                proactiveFF = true;
             } else if (input.isReactiveFF()) {
                 LOG.info("Failover will be reactive.");
-
+                reactiveFF = true;
             } else if (!input.isProactiveFF() && !input.isReactiveFF()) {
                 LOG.info("Both choices selected. Failover will be proactive.");
+                proactiveFF = true;
             }
         }
 
         if (input.getSrcNode() != null && input.getDstNode() != null) {
-            if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+            if (proactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
                 Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
                 DomainNode sourceNode = domainNodes.get(input.getSrcNode());
                 DomainNode destNode = domainNodes.get(input.getDstNode());
@@ -109,13 +117,25 @@ public class ExampleImpl implements OdlexampleService {
                     switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
                 }
             }
+            else if (reactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+                System.out.println("Welcome");
+                Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+                DomainNode sourceNode = domainNodes.get(input.getSrcNode());
+                DomainNode destNode = domainNodes.get(input.getDstNode());
+                srcNode = input.getSrcNode();
+                dstNode = input.getDstNode();
+                List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+                if (possiblePaths.size() > 0){
+                    path = possiblePaths.get(0);
+                }
+            }
         }
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
 
     }
 
 
-    private List<GraphPath<Integer, DomainLink>> createAllPaths(NetworkGraph graph, Integer sourceNode, Integer destNode) {
+    private static List<GraphPath<Integer, DomainLink>> createAllPaths(NetworkGraph graph, Integer sourceNode, Integer destNode) {
         //find all possible paths between source and destination
         if (graph != null) {
             KShortestPaths kPaths = new KShortestPaths<>(graph, 2);
@@ -163,6 +183,49 @@ public class ExampleImpl implements OdlexampleService {
             }
         }
 
+    }
+
+    public static void implementReactiveFailover(List<Link> linkList){
+
+        System.out.println(NetworkGraph.getInstance().getGraphLinks().size() + " " + NetworkGraph.getInstance().edgeSet().size());
+        Link linkDown = null;
+
+        if (srcNode != null && dstNode != null) {
+            boolean isLinkDown = false;
+            for (DomainLink domainLink : path.getEdgeList()){
+                for (Link link : linkList) {
+                    if (domainLink.getLink().equals(link)){
+                        System.out.println("The main path has link " + link.getLinkId().getValue() + " down");
+                        isLinkDown = true;
+                        linkDown = link;
+                        break;
+                    }
+                }
+            }
+            if (!isLinkDown){
+                System.out.println("The main path is not affected");
+            }
+            else if (linkDown != null){
+                //find an alternative path from the source of the failed link to the destination
+                Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+                List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), domainNodes.get(linkDown.getSource().getSourceNode().getValue()).getNodeID(), domainNodes.get(dstNode).getNodeID());
+                List<GraphPath<Integer, DomainLink>> pathsToRemove = new ArrayList<>();
+                System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
+                for (GraphPath<Integer, DomainLink> possiblePath : possiblePaths){
+                    for (DomainLink domainLink : possiblePath.getEdgeList()){
+                        if (domainLink.getLink().equals(linkDown)){
+                            pathsToRemove.add(possiblePath);
+                            break;
+                        }
+                    }
+                }
+                possiblePaths.removeAll(pathsToRemove);
+                System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
+                if (possiblePaths.size() > 0){
+                    GraphPath<Integer, DomainLink> reactivePath = possiblePaths.get(0);
+                }
+            }
+        }
     }
 
 }
