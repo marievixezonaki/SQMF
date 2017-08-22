@@ -64,8 +64,10 @@ public class GraphOperations {
                 }
                 //add the domain links
                 DomainLink domainLink = (DomainLink) graph.addEdge(sourceNode.getNodeID(), destNode.getNodeID());
-                domainLink.setLinkID(link.getLinkId().getValue());
-                domainLink.setLink(link);
+                if (domainLink != null) {
+                    domainLink.setLinkID(link.getLinkId().getValue());
+                    domainLink.setLink(link);
+                }
                 if (graph.getGraphLinks()!= null){
                     if (!graph.getGraphLinks().contains(link)) {
                         graph.getGraphLinks().add(link);
@@ -118,10 +120,19 @@ public class GraphOperations {
         if (linkList != null) {
             for (Link link : linkList) {
                 /* removing only links, nodes will be kept in the graph */
+                NodeId source = link.getSource().getSourceNode();
+                NodeId dest = link.getDestination().getDestNode();
+                DomainNode sourceNode = (DomainNode) graph.getDomainNodes().get(source.getValue());
+                DomainNode destNode = (DomainNode) graph.getDomainNodes().get(dest.getValue());
+
+                LOG.info("Removing link from edge " + sourceNode.getNodeID() + " to " + destNode.getNodeID());
+                graph.removeEdge(sourceNode.getNodeID(), destNode.getNodeID());
+
+
                 if (graph.getGraphLinks()!= null){
                     if (graph.getGraphLinks().contains(link)) {
+                //        graph.removeEdge(link.getSource().getSourceNode(), link.getDestination().getDestNode());
                         graph.getGraphLinks().remove(link);
-                        graph.removeEdge(link.getSource().getSourceNode(), link.getDestination().getDestNode());
                     }
                 }
             }

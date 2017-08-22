@@ -21,6 +21,8 @@ import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.nio.ch.Net;
+
 import java.util.*;
 import java.util.concurrent.Future;
 
@@ -29,17 +31,25 @@ public class ExampleImpl implements OdlexampleService {
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
     private DijkstraShortestPath<NodeId, Link> shortestPath = null;
     private BindingAwareBroker.ProviderContext session;
-    private HashMap<String, Integer> inputPorts = new HashMap<>();
-    private HashMap<String, Integer> outputPorts = new HashMap<>();
-    private HashMap<String, Integer> failoverPorts = new HashMap<>();
-    private HashMap<String, Integer> inputPortsFailover = new HashMap<>();
-    private HashMap<String, Integer> outputPortsFailover = new HashMap<>();
-    private DataBroker db;
-    public boolean proactiveFF = false;
+
+
+
+    private static HashMap<String, Integer> inputPorts = new HashMap<>();
+    private static HashMap<String, Integer> outputPorts = new HashMap<>();
+    private static HashMap<String, Integer> failoverPorts = new HashMap<>();
+    private static HashMap<String, Integer> inputPortsFailover = new HashMap<>();
+    private static HashMap<String, Integer> outputPortsFailover = new HashMap<>();
+    private static DataBroker db;
+    public static boolean proactiveFF = false;
     public static boolean reactiveFF = false;
     public static String srcNode = null;
     public static String dstNode = null;
     public static GraphPath<Integer, DomainLink> path;
+    public static Integer mainPathSize = 0;
+    public static List<String> mainPathLinks = new ArrayList();
+    public static Link linkDown = null;
+    public static boolean isLinkDown = false;
+    public static String linkDownName = "";
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db) {
         this.db = db;
@@ -66,86 +76,32 @@ public class ExampleImpl implements OdlexampleService {
         }
 
         if (input.getSrcNode() != null && input.getDstNode() != null) {
-            if (proactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
-                Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-                DomainNode sourceNode = domainNodes.get(input.getSrcNode());
-                DomainNode destNode = domainNodes.get(input.getDstNode());
-
-                List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-                if (possiblePaths.size() == 2){
-                    GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
-                    GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
-
-                    //find in and out ports for nodes of main path
-                    for (DomainLink link : mainPath.getEdgeList()){
-                        inputPorts.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
-                        outputPorts.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
-                        failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
-
-                    }
-                    //find in port for ingress node and out port for egress node, for main path
-                    if (!inputPorts.containsKey(sourceNode.getODLNodeID()) || !outputPorts.containsKey(destNode.getODLNodeID())) {
-                        findPortsForIngressAndEgressNodes(sourceNode, destNode);
-                    }
-
-                    //find failover ports for nodes of main path
-                    for (DomainLink link : mainPath.getEdgeList()){
-                        failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
-                    }
-                    failoverPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(failoverPath.getEdgeList().get(0).getLink().getSource().getSourceTp().getValue().split(":")[2]));
-
-                    //find in and out ports for nodes of failover path
-                    for (DomainLink link : failoverPath.getEdgeList()){
-                        inputPortsFailover.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
-                        outputPortsFailover.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
-
-                    }
-                    inputPortsFailover.put(sourceNode.getODLNodeID(), inputPorts.get(sourceNode.getODLNodeID()));
-                    outputPortsFailover.put(destNode.getODLNodeID(), outputPorts.get(destNode.getODLNodeID()));
-
-                    //have to print out an in port and an out port for all nodes of main path
-          //          System.out.println("Inports " + inputPorts.toString());
-         //           System.out.println("Outports " + outputPorts.toString());
-          //          System.out.println("Failoverports " + failoverPorts.toString());
-
-            //        System.out.println("Inports " + inputPortsFailover.toString());
-            //        System.out.println("Outports " + outputPortsFailover.toString());
-
-                    SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-                    switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
-                    switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
-                    switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
-                }
+            srcNode = input.getSrcNode();
+            dstNode = input.getDstNode();
+        }
+        Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+        DomainNode sourceNode = domainNodes.get(srcNode);
+        DomainNode destNode = domainNodes.get(dstNode);
+        List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+        if (possiblePaths.size() > 0){
+            path = possiblePaths.get(0);
+            mainPathSize = possiblePaths.get(0).getEdgeList().size();
+            for (DomainLink domainLink : possiblePaths.get(0).getEdgeList()){
+                mainPathLinks.add(domainLink.getLink().getLinkId().getValue());
             }
-            else if (reactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
-                System.out.println("Welcome");
-                Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-                DomainNode sourceNode = domainNodes.get(input.getSrcNode());
-                DomainNode destNode = domainNodes.get(input.getDstNode());
-                srcNode = input.getSrcNode();
-                dstNode = input.getDstNode();
-                List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-                if (possiblePaths.size() > 0){
-                    path = possiblePaths.get(0);
-                }
-            }
+        }
+        if (proactiveFF){
+            implementProactiveFailover();
         }
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
 
     }
-
 
     private static List<GraphPath<Integer, DomainLink>> createAllPaths(NetworkGraph graph, Integer sourceNode, Integer destNode) {
         //find all possible paths between source and destination
         if (graph != null) {
             KShortestPaths kPaths = new KShortestPaths<>(graph, 2);
             List<GraphPath<Integer, DomainLink>> graphPaths = kPaths.getPaths(sourceNode, destNode);
-
-            //      AllDirectedPaths allGraphPaths = new AllDirectedPaths(graph);
-            //      List<GraphPath<Integer, DomainLink>> allPossiblePaths = allGraphPaths.getAllPaths(sourceNode, destNode, true, Integer.MAX_VALUE);
-//            for (GraphPath<Integer, DomainLink> graphPath : graphPaths) {
-//                System.out.println("Path: " + graphPath.getEdgeList());
-//            }
             return graphPaths;
         } else {
             System.out.println("Graph was null.");
@@ -153,7 +109,7 @@ public class ExampleImpl implements OdlexampleService {
         }
     }
 
-    private void findPortsForIngressAndEgressNodes(DomainNode sourceNode, DomainNode destNode){
+    private static void findPortsForIngressAndEgressNodes(DomainNode sourceNode, DomainNode destNode){
         List<Link> graphLinks = NetworkGraph.getInstance().getGraphLinks();
 
         for (Link graphLink : graphLinks){
@@ -187,42 +143,117 @@ public class ExampleImpl implements OdlexampleService {
 
     public static void implementReactiveFailover(List<Link> linkList){
 
-        System.out.println(NetworkGraph.getInstance().getGraphLinks().size() + " " + NetworkGraph.getInstance().edgeSet().size());
-        Link linkDown = null;
-
-        if (srcNode != null && dstNode != null) {
-            boolean isLinkDown = false;
-            for (DomainLink domainLink : path.getEdgeList()){
-                for (Link link : linkList) {
-                    if (domainLink.getLink().equals(link)){
-                        System.out.println("The main path has link " + link.getLinkId().getValue() + " down");
-                        isLinkDown = true;
-                        linkDown = link;
-                        break;
-                    }
-                }
-            }
-            if (!isLinkDown){
-                System.out.println("The main path is not affected");
-            }
-            else if (linkDown != null){
-                //find an alternative path from the source of the failed link to the destination
-                Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-                List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), domainNodes.get(linkDown.getSource().getSourceNode().getValue()).getNodeID(), domainNodes.get(dstNode).getNodeID());
-                List<GraphPath<Integer, DomainLink>> pathsToRemove = new ArrayList<>();
-                System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
-                for (GraphPath<Integer, DomainLink> possiblePath : possiblePaths){
-                    for (DomainLink domainLink : possiblePath.getEdgeList()){
-                        if (domainLink.getLink().equals(linkDown)){
-                            pathsToRemove.add(possiblePath);
+        Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+        DomainNode sourceNode = domainNodes.get(srcNode);
+        DomainNode destNode = domainNodes.get(dstNode);
+        List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+    //    if (possiblePaths.size() > 0){
+    //        path = possiblePaths.get(0);
+    //    }
+        if (!isLinkDown) {
+            if (srcNode != null && dstNode != null) {
+                for (String linkName : mainPathLinks){
+//                for (DomainLink domainLink : path.getEdgeList()) {
+                    for (Link link : linkList) {
+//                        if (domainLink.getLink().equals(link)) {
+                        if (linkName.equals(link.getLinkId().getValue())) {
+                            System.out.println("The main path has link " + link.getLinkId().getValue() + " down");
+                            isLinkDown = true;
+                            linkDown = link;
+                            linkDownName = link.getLinkId().getValue();
                             break;
                         }
                     }
                 }
-                possiblePaths.removeAll(pathsToRemove);
-                System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
-                if (possiblePaths.size() > 0){
-                    GraphPath<Integer, DomainLink> reactivePath = possiblePaths.get(0);
+                if (!isLinkDown) {
+                    System.out.println("The main path is not affected");
+                } else if (linkDown != null) {
+                    //find an alternative path from the source of the failed link to the destination
+               /*     List<GraphPath<Integer, DomainLink>> pathsToRemove = new ArrayList<>();
+                    for (GraphPath<Integer, DomainLink> possiblePath : possiblePaths) {
+                        for (DomainLink domainLink : possiblePath.getEdgeList()) {
+                            if (domainLink.getLink().equals(linkDown)) {
+                                pathsToRemove.add(possiblePath);
+                                break;
+                            }
+                        }
+                    }
+                    possiblePaths.removeAll(pathsToRemove);*/
+                    System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
+                    if (possiblePaths.size() > 0) {
+                        GraphPath<Integer, DomainLink> reactivePath = possiblePaths.get(0);
+                        //add failover flows
+                    }
+                }
+            }
+        }
+    }
+
+    public static void implementProactiveFailover(){
+        if (proactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+            Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+          //  DomainNode sourceNode = domainNodes.get(input.getSrcNode());
+         //   DomainNode destNode = domainNodes.get(input.getDstNode());
+            DomainNode sourceNode = domainNodes.get(srcNode);
+            DomainNode destNode = domainNodes.get(dstNode);
+
+            List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+            if (possiblePaths.size() > 1){
+                GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
+                GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
+
+                //find in and out ports for nodes of main path
+                for (DomainLink link : mainPath.getEdgeList()){
+                    inputPorts.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
+                    outputPorts.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
+                    failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+                }
+                //find in port for ingress node and out port for egress node, for main path
+                if (!inputPorts.containsKey(sourceNode.getODLNodeID()) || !outputPorts.containsKey(destNode.getODLNodeID())) {
+                    findPortsForIngressAndEgressNodes(sourceNode, destNode);
+                }
+
+                //find failover ports for nodes of main path
+                for (DomainLink link : mainPath.getEdgeList()){
+                    failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+                }
+                failoverPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(failoverPath.getEdgeList().get(0).getLink().getSource().getSourceTp().getValue().split(":")[2]));
+
+                //find in and out ports for nodes of failover path
+                for (DomainLink link : failoverPath.getEdgeList()){
+                    inputPortsFailover.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
+                    outputPortsFailover.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
+
+                }
+                inputPortsFailover.put(sourceNode.getODLNodeID(), inputPorts.get(sourceNode.getODLNodeID()));
+                outputPortsFailover.put(destNode.getODLNodeID(), outputPorts.get(destNode.getODLNodeID()));
+
+                //have to print out an in port and an out port for all nodes of main path
+                //          System.out.println("Inports " + inputPorts.toString());
+                //           System.out.println("Outports " + outputPorts.toString());
+                //          System.out.println("Failoverports " + failoverPorts.toString());
+
+                //        System.out.println("Inports " + inputPortsFailover.toString());
+                //        System.out.println("Outports " + outputPortsFailover.toString());
+
+                SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+                switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
+                switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
+                switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
+            }
+        }
+    }
+
+    public static void linkUp(List<Link> linkList){
+        if (isLinkDown){
+            for (Link link : linkList){
+                if (link.getLinkId().getValue().equals(linkDownName)){
+                    System.out.println("Link " + link.getLinkId().getValue() + " is up again");
+                    //remove failover flows
+                    isLinkDown = false;
+                    linkDown = null;
+                    linkDownName = "";
+                    break;
                 }
             }
         }
