@@ -10,7 +10,6 @@ package odl.example.impl;
 import com.google.common.util.concurrent.Futures;
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import org.jgrapht.GraphPath;
-import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
@@ -21,8 +20,6 @@ import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.Net;
-
 import java.util.*;
 import java.util.concurrent.Future;
 
@@ -146,16 +143,10 @@ public class ExampleImpl implements OdlexampleService {
         Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
         DomainNode sourceNode = domainNodes.get(srcNode);
         DomainNode destNode = domainNodes.get(dstNode);
-        List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-    //    if (possiblePaths.size() > 0){
-    //        path = possiblePaths.get(0);
-    //    }
         if (!isLinkDown) {
             if (srcNode != null && dstNode != null) {
                 for (String linkName : mainPathLinks){
-//                for (DomainLink domainLink : path.getEdgeList()) {
                     for (Link link : linkList) {
-//                        if (domainLink.getLink().equals(link)) {
                         if (linkName.equals(link.getLinkId().getValue())) {
                             System.out.println("The main path has link " + link.getLinkId().getValue() + " down");
                             isLinkDown = true;
@@ -169,16 +160,7 @@ public class ExampleImpl implements OdlexampleService {
                     System.out.println("The main path is not affected");
                 } else if (linkDown != null) {
                     //find an alternative path from the source of the failed link to the destination
-               /*     List<GraphPath<Integer, DomainLink>> pathsToRemove = new ArrayList<>();
-                    for (GraphPath<Integer, DomainLink> possiblePath : possiblePaths) {
-                        for (DomainLink domainLink : possiblePath.getEdgeList()) {
-                            if (domainLink.getLink().equals(linkDown)) {
-                                pathsToRemove.add(possiblePath);
-                                break;
-                            }
-                        }
-                    }
-                    possiblePaths.removeAll(pathsToRemove);*/
+                    List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
                     System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
                     if (possiblePaths.size() > 0) {
                         GraphPath<Integer, DomainLink> reactivePath = possiblePaths.get(0);
@@ -192,8 +174,6 @@ public class ExampleImpl implements OdlexampleService {
     public static void implementProactiveFailover(){
         if (proactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
             Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-          //  DomainNode sourceNode = domainNodes.get(input.getSrcNode());
-         //   DomainNode destNode = domainNodes.get(input.getDstNode());
             DomainNode sourceNode = domainNodes.get(srcNode);
             DomainNode destNode = domainNodes.get(dstNode);
 
@@ -227,14 +207,6 @@ public class ExampleImpl implements OdlexampleService {
                 }
                 inputPortsFailover.put(sourceNode.getODLNodeID(), inputPorts.get(sourceNode.getODLNodeID()));
                 outputPortsFailover.put(destNode.getODLNodeID(), outputPorts.get(destNode.getODLNodeID()));
-
-                //have to print out an in port and an out port for all nodes of main path
-                //          System.out.println("Inports " + inputPorts.toString());
-                //           System.out.println("Outports " + outputPorts.toString());
-                //          System.out.println("Failoverports " + failoverPorts.toString());
-
-                //        System.out.println("Inports " + inputPortsFailover.toString());
-                //        System.out.println("Outports " + outputPortsFailover.toString());
 
                 SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
                 switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));

@@ -131,7 +131,6 @@ public class GraphOperations {
 
                 if (graph.getGraphLinks()!= null){
                     if (graph.getGraphLinks().contains(link)) {
-                //        graph.removeEdge(link.getSource().getSourceNode(), link.getDestination().getDestNode());
                         graph.getGraphLinks().remove(link);
                     }
                 }

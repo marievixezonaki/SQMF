@@ -44,7 +44,6 @@ public class TopologyListener implements DataChangeListener {
         Map<InstanceIdentifier<?>, DataObject> createdData = dataChangeEvent.getCreatedData();
         Set<InstanceIdentifier<?>> removedPaths = dataChangeEvent.getRemovedPaths();
         Map<InstanceIdentifier<?>, DataObject> originalData = dataChangeEvent.getOriginalData();
-        Map<InstanceIdentifier<?>, DataObject> updatedData = dataChangeEvent.getUpdatedData();
         if (createdData != null && !createdData.isEmpty()) {
 
             Set<InstanceIdentifier<?>> data = createdData.keySet();
@@ -75,7 +74,6 @@ public class TopologyListener implements DataChangeListener {
                 }
             }
             graphOperations.removeFromGraph(NetworkGraph.getInstance(), linkList);
-      //      System.out.println("Now links are " + NetworkGraph.getInstance().edgeSet().size());
             if (ExampleImpl.reactiveFF){
                 ExampleImpl.implementReactiveFailover(linkList);
             }
