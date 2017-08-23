@@ -42,7 +42,6 @@ public class ExampleImpl implements OdlexampleService {
     public static String srcNode = null;
     public static String dstNode = null;
     public static GraphPath<Integer, DomainLink> path;
-    public static Integer mainPathSize = 0;
     public static List<String> mainPathLinks = new ArrayList();
     public static Link linkDown = null;
     public static boolean isLinkDown = false;
@@ -79,10 +78,16 @@ public class ExampleImpl implements OdlexampleService {
         Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
         DomainNode sourceNode = domainNodes.get(srcNode);
         DomainNode destNode = domainNodes.get(dstNode);
+
+        //check if the given switches are edge switches, therefore connected to hosts
+        if (!checkIfEdgeSwitches(sourceNode, destNode)){
+            LOG.info("Not edge switches given, returning...");
+            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+        }
+
         List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
         if (possiblePaths.size() > 0){
             path = possiblePaths.get(0);
-            mainPathSize = possiblePaths.get(0).getEdgeList().size();
             for (DomainLink domainLink : possiblePaths.get(0).getEdgeList()){
                 mainPathLinks.add(domainLink.getLink().getLinkId().getValue());
             }
@@ -92,6 +97,28 @@ public class ExampleImpl implements OdlexampleService {
         }
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
 
+    }
+
+    private boolean checkIfEdgeSwitches(DomainNode sourceNode, DomainNode destNode){
+        List<Link> graphLinks = NetworkGraph.getInstance().getGraphLinks();
+        Boolean isSourceEdge = false, isDestEdge = false;
+
+        for (Link graphLink : graphLinks){
+            if (graphLink.getLinkId().getValue().contains("host")){
+                if (graphLink.getLinkId().getValue().contains(destNode.getODLNodeID())){
+                    isDestEdge = true;
+                }
+                else if (graphLink.getLinkId().getValue().contains(sourceNode.getODLNodeID())){
+                    isSourceEdge = true;
+                }
+            }
+        }
+        if (isDestEdge && isSourceEdge) {
+            return true;
+        }
+        else{
+            return false;
+        }
     }
 
     private static List<GraphPath<Integer, DomainLink>> createAllPaths(NetworkGraph graph, Integer sourceNode, Integer destNode) {
@@ -135,7 +162,6 @@ public class ExampleImpl implements OdlexampleService {
                 }
             }
         }
-
     }
 
     public static void implementReactiveFailover(List<Link> linkList){
@@ -150,7 +176,7 @@ public class ExampleImpl implements OdlexampleService {
                         if (linkName.equals(link.getLinkId().getValue())) {
                             System.out.println("The main path has link " + link.getLinkId().getValue() + " down");
                             isLinkDown = true;
-                            linkDown = link;
+//                            linkDown = link;
                             linkDownName = link.getLinkId().getValue();
                             break;
                         }
@@ -158,16 +184,33 @@ public class ExampleImpl implements OdlexampleService {
                 }
                 if (!isLinkDown) {
                     System.out.println("The main path is not affected");
-                } else if (linkDown != null) {
+ //               } else if (linkDown != null) {
+                } else if (!linkDownName.equals("")) {
                     //find an alternative path from the source of the failed link to the destination
                     List<GraphPath<Integer, DomainLink>> possiblePaths = createAllPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-                    System.out.println("Found " + possiblePaths.size() + " alternative paths" + possiblePaths.toString());
                     if (possiblePaths.size() > 0) {
                         GraphPath<Integer, DomainLink> reactivePath = possiblePaths.get(0);
-                        //add failover flows
+                        //configure reactive path - add failover flows
+                        findPorts(reactivePath, sourceNode, destNode);
+                        SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+                        switchConfigurator.configureFailoverPath(reactivePath.getEdgeList(), inputPorts, outputPorts);
+                        switchConfigurator.configureFailoverIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()));
                     }
                 }
             }
+        }
+    }
+
+    public static void findPorts(GraphPath<Integer, DomainLink> path, DomainNode sourceNode, DomainNode destNode) {
+        //find in and out ports for nodes of main path
+        for (DomainLink link : path.getEdgeList()) {
+            inputPorts.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
+            outputPorts.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
+            failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+        }
+        //find in port for ingress node and out port for egress node, for main path
+        if (!inputPorts.containsKey(sourceNode.getODLNodeID()) || !outputPorts.containsKey(destNode.getODLNodeID())) {
+            findPortsForIngressAndEgressNodes(sourceNode, destNode);
         }
     }
 
@@ -182,16 +225,7 @@ public class ExampleImpl implements OdlexampleService {
                 GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
                 GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
 
-                //find in and out ports for nodes of main path
-                for (DomainLink link : mainPath.getEdgeList()){
-                    inputPorts.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
-                    outputPorts.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
-                    failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
-                }
-                //find in port for ingress node and out port for egress node, for main path
-                if (!inputPorts.containsKey(sourceNode.getODLNodeID()) || !outputPorts.containsKey(destNode.getODLNodeID())) {
-                    findPortsForIngressAndEgressNodes(sourceNode, destNode);
-                }
+                findPorts(mainPath, sourceNode, destNode);
 
                 //find failover ports for nodes of main path
                 for (DomainLink link : mainPath.getEdgeList()){
@@ -222,8 +256,10 @@ public class ExampleImpl implements OdlexampleService {
                 if (link.getLinkId().getValue().equals(linkDownName)){
                     System.out.println("Link " + link.getLinkId().getValue() + " is up again");
                     //remove failover flows
+                    SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+                    switchConfigurator.removeReactiveFlows();
                     isLinkDown = false;
-                    linkDown = null;
+                    //linkDown = null;
                     linkDownName = "";
                     break;
                 }

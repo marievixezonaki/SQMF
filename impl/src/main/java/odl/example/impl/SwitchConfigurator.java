@@ -83,6 +83,7 @@ public class SwitchConfigurator {
     private static HashMap<String, Integer> groupsHashMap = new HashMap();
     private static final Integer IP_ETHERTYPE = 0x0800;
     private Integer UDP_PROTOCOL = 17;
+    private static List<String> connectorsWithFlowsToRemove = new ArrayList<>();
 
     public SwitchConfigurator(DataBroker db) {
         this.db = db;
@@ -158,7 +159,25 @@ public class SwitchConfigurator {
 
     }
 
+    public void configureFailoverIngress(DomainNode sourceNode, Integer inPort, Integer outputPort){
+
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+
+        String switchToConfigure = sourceNode.getODLNodeID();
+        String standardOutputPort = switchToConfigure.concat(":").concat(outputPort.toString());
+
+        Flow flow = createFlow(standardOutputPort, inPort);
+        InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
+
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
+        transaction.submit();
+
+    }
+
     private Flow createFlow(String standardOutputPort, Integer inPort){
+
+        connectorsWithFlowsToRemove.add(standardOutputPort);
+
         FlowBuilder flowBuilder = new FlowBuilder()
                 .setTableId((short) 0)
                 .setFlowName("flow" + flowId)
@@ -236,6 +255,8 @@ public class SwitchConfigurator {
     }
 
     private Flow createFlowFailover(String standardOutputPort, Integer inPort){
+
+        connectorsWithFlowsToRemove.add(standardOutputPort);
 
         FlowBuilder flowBuilder = new FlowBuilder()
                 .setTableId((short) 0)
@@ -477,6 +498,27 @@ public class SwitchConfigurator {
                 .augmentation(FlowCapableNode.class)
                 .child(Group.class, new GroupKey(group.getGroupId())).build();
         return groupPath;
+    }
+
+    public void removeReactiveFlows(){
+        System.out.println("We have " + connectorsWithFlowsToRemove.size() + " flows to remove.");
+
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+        for (String connector : connectorsWithFlowsToRemove) {
+            String[] switchParts = connector.split(":");
+            String switchName = switchParts[0].concat(":").concat(switchParts[1]);
+
+            // build instance identifier for flow
+            InstanceIdentifier<Flow> flowPath = InstanceIdentifier
+                    .builder(Nodes.class)
+                    .child(Node.class, new NodeKey(new NodeId(switchName)))
+                    .augmentation(FlowCapableNode.class)
+                    .child(Table.class, new TableKey((short) 0))
+                    .child(Flow.class, new FlowKey(new FlowId(connector))).build();
+
+            transaction.delete(LogicalDatastoreType.CONFIGURATION, flowPath);
+        }
+        transaction.submit();
     }
 }
 
