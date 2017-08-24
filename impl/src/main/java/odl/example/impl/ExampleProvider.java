@@ -49,8 +49,9 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
         db.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, linkInstance,
                 new TopologyListener(db, notificationService),
                 AsyncDataBroker.DataChangeScope.BASE);
-        System.out.println("Topology Listener set");
+        LOG.info("Topology Listener set");
 
+        //starting the ExampleImpl class
         exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db));
     }
 

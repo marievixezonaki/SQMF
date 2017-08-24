@@ -14,11 +14,15 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The class which handles the domain graph.
+ *
+ * @author Marievi Xezonaki
+ */
 public class GraphOperations {
 
     /**
-     * The method which adds updates the network graph with new
-     * links and nodes, when a change in the topology is detected.
+     * The method which adds updates the network graph with new links and nodes, when a change in the topology is detected.
      *
      * @param graph         The graph which links and nodes will be added to.
      * @param linkList      The links to be added to the graph, which the nodes will occur from.
@@ -52,8 +56,7 @@ public class GraphOperations {
                         System.out.println("added graph node with id " + destNode.getODLNodeID());
                     }
                 }
-                /* if graph's node list is not initialized, initialize
-                * it and then add the source and destination nodes */
+                // if graph's node list is not initialized, initialize it and then add the source and destination nodes
                 else{
                     List<NodeId> graphNodes = new ArrayList<>();
                     graph.setGraphNodes(graphNodes);
@@ -119,7 +122,7 @@ public class GraphOperations {
         }
         if (linkList != null) {
             for (Link link : linkList) {
-                /* removing only links, nodes will be kept in the graph */
+                // removing only links, nodes will be kept in the graph
                 NodeId source = link.getSource().getSourceNode();
                 NodeId dest = link.getDestination().getDestNode();
                 DomainNode sourceNode = (DomainNode) graph.getDomainNodes().get(source.getValue());

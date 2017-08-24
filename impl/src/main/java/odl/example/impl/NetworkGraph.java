@@ -14,12 +14,17 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import java.util.Hashtable;
 import java.util.List;
 
+/**
+ * The class modelling the domain.
+ *
+ * @author Marievi Xezonaki
+ */
 public class NetworkGraph<T, E> extends SimpleDirectedWeightedGraph<T, E> {
     public static int graphIDCounter = 0;
     private int graphID = -1;
     private static NetworkGraph networkGraph = null;
     private List<Link> graphLinks = null;
-    private static List<NodeId> graphNodes = null;
+    private List<NodeId> graphNodes = null;
 
     /**
      * Hashtable containing the structure of the domain graph nodes, <br>

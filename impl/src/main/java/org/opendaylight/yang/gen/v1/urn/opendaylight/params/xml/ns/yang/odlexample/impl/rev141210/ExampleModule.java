@@ -22,7 +22,6 @@ public class ExampleModule extends org.opendaylight.yang.gen.v1.urn.opendaylight
 
     @Override
     public void customValidation() {
-        // add custom validation form module attributes here.
     }
 
     @Override
@@ -30,7 +29,6 @@ public class ExampleModule extends org.opendaylight.yang.gen.v1.urn.opendaylight
 
         NotificationProviderService notificationService = getNotificationServiceDependency();
 
-      //  DataBroker db = getDataBrokerDependency();
         ExampleProvider provider = new ExampleProvider(notificationService);
         getBrokerDependency().registerProvider(provider);
         return provider;

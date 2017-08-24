@@ -7,6 +7,11 @@
  */
 package odl.example.impl;
 
+/**
+ * The class modelling a node of the domain.
+ *
+ * @author Marievi Xezonaki
+ */
 public class DomainNode {
     private int nodeID = -1;
     private int parentGraphID = -1;

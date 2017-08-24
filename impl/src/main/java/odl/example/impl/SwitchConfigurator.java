@@ -16,9 +16,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.openflowplugin.api.OFConstants;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.PortNumber;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.GroupActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.OutputActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.group.action._case.GroupActionBuilder;
@@ -56,22 +54,23 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetSourceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.IpMatchBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.ProtocolMatchFieldsBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.layer._4.match.UdpMatchBuilder;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.BucketId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.GroupTypes;
 
+/**
+ * The class containing the necessary methods for the switches configuration.
+ *
+ * @author Marievi Xezonaki
+ */
 public class SwitchConfigurator {
 
     private DataBroker db;
@@ -83,29 +82,37 @@ public class SwitchConfigurator {
     private static HashMap<String, Integer> groupsHashMap = new HashMap();
     private static final Integer IP_ETHERTYPE = 0x0800;
     private Integer UDP_PROTOCOL = 17;
-    private static List<String> connectorsWithFlowsToRemove = new ArrayList<>();
+    private static HashMap<Integer, String> mapFlowIdsToSwitches = new HashMap<>();
 
     public SwitchConfigurator(DataBroker db) {
         this.db = db;
     }
 
+    /**
+     * The method which configures the ingress (source) switch of the main path, in proactive failover.
+     *
+     * @param sourceNode    The source node of the main path
+     * @param inPort        The input port of the source node
+     * @param outputPort    The output port of the source node
+     * @param failoverPort  The failover port of the source node (where the paths will be redirected in case of link failure)
+     * @return
+     */
     public void configureIngress(DomainNode sourceNode, Integer inPort, Integer outputPort, Integer failoverPort){
-        System.out.println("Output from " + sourceNode.getODLNodeID() + " will be at port " + outputPort + " and failover at " + failoverPort + " ,input is at " + inPort);
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
 
         String standardOutputPort = sourceNode.getODLNodeID().concat(":").concat(outputPort.toString());
         String backupPort = sourceNode.getODLNodeID().concat(":").concat(failoverPort.toString());
 
+        //create flows and groups
         Group groupForIngress = createGroupForIngressSwitch(standardOutputPort, backupPort);
         InstanceIdentifier<Group> instanceIdentifierGroupIngress = createInstanceIdentifierForGroup(sourceNode.getODLNodeID(), groupForIngress);
-
         Flow flowForIngress = createFlow(standardOutputPort, inPort);
         InstanceIdentifier<Flow> instanceIdentifierIngress = createInstanceIdentifierForFlow(sourceNode.getODLNodeID(), flowForIngress);
-
         Flow flowForIngressFailover = createFlow(backupPort, outputPort);
         InstanceIdentifier<Flow> instanceIdentifierIngressFailover = createInstanceIdentifierForFlow(sourceNode.getODLNodeID(), flowForIngressFailover);
 
+        //put flows and groups into transaction
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierGroupIngress, groupForIngress, true);
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngress, flowForIngress, true);
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngressFailover, flowForIngressFailover, true);
@@ -113,6 +120,15 @@ public class SwitchConfigurator {
         transaction.submit();
     }
 
+    /**
+     * The method which configures the core and the egress (destination) switch of the main path, in proactive failover.
+     *
+     * @param mainPathLinks  The links of the main path
+     * @param inputPorts     The input ports of the main path's nodes
+     * @param outputPorts    The output ports of the main path's nodes
+     * @param failoverPorts  The failover ports of the main path's nodes (where the paths will be redirected in case of link failure)
+     * @return
+     */
     public void configureCoreAndEgress(List<DomainLink> mainPathLinks, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts, HashMap<String, Integer> failoverPorts){
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
@@ -121,15 +137,16 @@ public class SwitchConfigurator {
             String switchToConfigure = link.getLink().getDestination().getDestNode().getValue();
             String standardOutputPort = switchToConfigure.concat(":").concat(outputPorts.get(switchToConfigure).toString());
             String backupPort = switchToConfigure.concat(":").concat(failoverPorts.get(switchToConfigure).toString());
+
+            //create flows and groups
             Group group = createGroupForCoreAndEgressSwitch(standardOutputPort, backupPort);
             InstanceIdentifier<Group> instanceIdentifierGroup = createInstanceIdentifierForGroup(switchToConfigure, group);
-
             Flow flow = createFlow(standardOutputPort, inputPorts.get(switchToConfigure));
             InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
-
             Flow flowFailover = createFlow(backupPort, outputPorts.get(switchToConfigure));
             InstanceIdentifier<Flow> instanceIdentifierFailover = createInstanceIdentifierForFlow(switchToConfigure, flowFailover);
 
+            //put flows and groups into transaction
             transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierGroup, group, true);
             transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
             transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierFailover, flowFailover, true);
@@ -140,6 +157,14 @@ public class SwitchConfigurator {
 
     }
 
+    /**
+     * The method which configures the core and the egress (destination) switch of the failover path, in both proactive and reactive failover.
+     *
+     * @param failoverPathLinks     The links of the failover path
+     * @param inputPortsFailover    The input ports of the failover path's nodes
+     * @param outputPortsFailover   The output ports of the failover path's nodes
+     * @return
+     */
     public void configureFailoverPath(List<DomainLink> failoverPathLinks, HashMap<String, Integer> inputPortsFailover, HashMap<String, Integer> outputPortsFailover){
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
@@ -148,9 +173,11 @@ public class SwitchConfigurator {
             String switchToConfigure = link.getLink().getDestination().getDestNode().getValue();
             String standardOutputPort = switchToConfigure.concat(":").concat(outputPortsFailover.get(switchToConfigure).toString());
 
+            //create flow
             Flow flow = createFlowFailover(standardOutputPort, inputPortsFailover.get(switchToConfigure));
             InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
 
+            //put flow into transaction
             transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
 
         }
@@ -159,6 +186,14 @@ public class SwitchConfigurator {
 
     }
 
+    /**
+     * The method which configures the ingress (source) switch of the failover path in reactive failover.
+     *
+     * @param sourceNode    The source node of the failover path
+     * @param inPort        The input port of the failover path's source node
+     * @param outputPort    The output port of the failover path's source node
+     * @return
+     */
     public void configureFailoverIngress(DomainNode sourceNode, Integer inPort, Integer outputPort){
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
@@ -166,17 +201,28 @@ public class SwitchConfigurator {
         String switchToConfigure = sourceNode.getODLNodeID();
         String standardOutputPort = switchToConfigure.concat(":").concat(outputPort.toString());
 
+        //create flow
         Flow flow = createFlow(standardOutputPort, inPort);
         InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
 
+        //put flow into transaction
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
         transaction.submit();
 
     }
 
+    /**
+     * The method which creates a flow for a node, in both proactive and reactive failover.
+     *
+     * @param standardOutputPort    The output port of the node
+     * @param inPort                The input port of the node
+     * @return                      The created flow
+     */
     private Flow createFlow(String standardOutputPort, Integer inPort){
 
-        connectorsWithFlowsToRemove.add(standardOutputPort);
+        String[] switchParts = standardOutputPort.split(":");
+        String switchName = switchParts[0].concat(":").concat(switchParts[1]);
+        mapFlowIdsToSwitches.put(flowId, switchName);
 
         FlowBuilder flowBuilder = new FlowBuilder()
                 .setTableId((short) 0)
@@ -186,6 +232,7 @@ public class SwitchConfigurator {
 
         NodeConnectorId inputPort = new NodeConnectorId(inPort.toString());
 
+        //match udp and input port
         Match match = new MatchBuilder()
                 .setEthernetMatch(new EthernetMatchBuilder()
                     .setEthernetType(new EthernetTypeBuilder()
@@ -254,9 +301,18 @@ public class SwitchConfigurator {
         return flowBuilder.build();
     }
 
+    /**
+     * The method which creates a flow for a failover node, in both proactive and reactive failover.
+     *
+     * @param standardOutputPort    The output port of the node
+     * @param inPort                The input port of the node
+     * @return                      The created flow
+     */
     private Flow createFlowFailover(String standardOutputPort, Integer inPort){
 
-        connectorsWithFlowsToRemove.add(standardOutputPort);
+        String[] switchParts = standardOutputPort.split(":");
+        String switchName = switchParts[0].concat(":").concat(switchParts[1]);
+        mapFlowIdsToSwitches.put(flowId, switchName);
 
         FlowBuilder flowBuilder = new FlowBuilder()
                 .setTableId((short) 0)
@@ -281,6 +337,7 @@ public class SwitchConfigurator {
         ActionBuilder actionBuilder = new ActionBuilder();
         List<Action> actions = new ArrayList<Action>();
 
+        //output to port
         Action outputNodeConnectorAction = actionBuilder
                 .setOrder(0).setAction(new OutputActionCaseBuilder()
                         .setOutputAction(new OutputActionBuilder()
@@ -321,6 +378,13 @@ public class SwitchConfigurator {
         return flowBuilder.build();
     }
 
+    /**
+     * The method which creates a group for the main path's nodes, in proactive failover.
+     *
+     * @param standardOutputPort    The output port of the node
+     * @param backupPort            The failover port of the node
+     * @return                      The created flow
+     */
     private Group createGroupForIngressSwitch(String standardOutputPort, String backupPort){
 
         if (!groupsHashMap.containsKey(standardOutputPort)) {
@@ -363,7 +427,6 @@ public class SwitchConfigurator {
             Action outputNodeConnectorActionFailover = actionBuilderFailover
                     .setOrder(1).setAction(new OutputActionCaseBuilder()
                             .setOutputAction(new OutputActionBuilder()
-                     //               .setOutputNodeConnector(new Uri(OutputPortValues.INPORT.toString()))
                                     .setOutputNodeConnector(new Uri(backupPort))
                                     .build())
                             .build())
@@ -401,6 +464,13 @@ public class SwitchConfigurator {
         }
     }
 
+    /**
+     * The method which creates a flow for the main path's ingress node, in proactive failover.
+     *
+     * @param standardOutputPort    The output port of the node
+     * @param backupPort            The backup port of the node
+     * @return                      The created flow
+     */
     private Group createGroupForCoreAndEgressSwitch(String standardOutputPort, String backupPort){
 
         if (!groupsHashMap.containsKey(standardOutputPort)) {
@@ -481,6 +551,13 @@ public class SwitchConfigurator {
         }
     }
 
+    /**
+     * The method which creates an instance identifier for a flow.
+     *
+     * @param switchToConfigure   The switch were the flow will be added
+     * @param flow                The flow to be added
+     * @return                    The created instance identifier
+     */
     private InstanceIdentifier<Flow> createInstanceIdentifierForFlow(String switchToConfigure, Flow flow){
         InstanceIdentifier<Flow> flowPath = InstanceIdentifier
                 .builder(Nodes.class)
@@ -491,6 +568,13 @@ public class SwitchConfigurator {
         return flowPath;
     }
 
+    /**
+     * The method which creates an instance identifier for a group.
+     *
+     * @param switchToConfigure    The switch were the group will be added
+     * @param group                The group to be added
+     * @return                     The created instance identifier
+     */
     private InstanceIdentifier<Group> createInstanceIdentifierForGroup(String switchToConfigure, Group group){
         InstanceIdentifier<Group> groupPath = InstanceIdentifier
                 .builder(Nodes.class)
@@ -500,26 +584,24 @@ public class SwitchConfigurator {
         return groupPath;
     }
 
+    /**
+     * The method which removes the flows added reactively.
+     */
     public void removeReactiveFlows(){
-        System.out.println("We have " + connectorsWithFlowsToRemove.size() + " flows to remove.");
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
-        for (String connector : connectorsWithFlowsToRemove) {
-            String[] switchParts = connector.split(":");
-            String switchName = switchParts[0].concat(":").concat(switchParts[1]);
-
-            // build instance identifier for flow
+        for (Integer flowId : mapFlowIdsToSwitches.keySet()){
             InstanceIdentifier<Flow> flowPath = InstanceIdentifier
                     .builder(Nodes.class)
-                    .child(Node.class, new NodeKey(new NodeId(switchName)))
+                    .child(Node.class, new NodeKey(new NodeId(mapFlowIdsToSwitches.get(flowId))))
                     .augmentation(FlowCapableNode.class)
                     .child(Table.class, new TableKey((short) 0))
-                    .child(Flow.class, new FlowKey(new FlowId(connector))).build();
-
+                    .child(Flow.class, new FlowKey(new FlowId(flowId.toString()))).build();
             transaction.delete(LogicalDatastoreType.CONFIGURATION, flowPath);
         }
         transaction.submit();
     }
+
 }
 
 

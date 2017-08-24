@@ -21,6 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * The class listening to topology changes and updating the domain graph appropriately.
+ *
+ * @author Marievi Xezonaki
+ */
 public class TopologyListener implements DataChangeListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(TopologyListener.class);
@@ -33,6 +38,9 @@ public class TopologyListener implements DataChangeListener {
         this.notificationService = notificationService;
     }
 
+    /**
+     * The method which detects the topology changes.
+     */
     @Override
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> dataChangeEvent) {
 
@@ -57,7 +65,10 @@ public class TopologyListener implements DataChangeListener {
                     }
                 }
             }
+            //update the domain graph with the added links
             graphOperations.updateGraph(NetworkGraph.getInstance(), linkList);
+            /*if a list of links is detected to be added and reactive failover has been chosen, examine if
+              a failed path has been restored (in order to remove established flow rules)*/
             if (ExampleImpl.reactiveFF){
                 ExampleImpl.linkUp(linkList);
             }
@@ -73,7 +84,10 @@ public class TopologyListener implements DataChangeListener {
                     }
                 }
             }
+            //remove the removed links from the domain graph
             graphOperations.removeFromGraph(NetworkGraph.getInstance(), linkList);
+            /*if a list of links is detected to be removed and reactive failover has been chosen, examine if
+              an active path is failing (in order to establish necessary flow rules)*/
             if (ExampleImpl.reactiveFF){
                 ExampleImpl.implementReactiveFailover(linkList);
             }

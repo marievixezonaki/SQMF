@@ -10,6 +10,11 @@ package odl.example.impl;
 import org.jgrapht.graph.DefaultWeightedEdge;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
 
+/**
+ * The class modelling a link of the domain.
+ *
+ * @author Marievi Xezonaki
+ */
 public class DomainLink extends DefaultWeightedEdge {
 
     private String linkID;
