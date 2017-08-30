@@ -21,7 +21,10 @@ import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The core class of the implementation.
@@ -39,45 +42,38 @@ public class ExampleImpl implements OdlexampleService {
     private static HashMap<String, Integer> inputPortsFailover = new HashMap<>();
     private static HashMap<String, Integer> outputPortsFailover = new HashMap<>();
     private static DataBroker db;
-    public static boolean proactiveFF = false;
-    public static boolean reactiveFF = false;
     public static String srcNode = null;
     public static String dstNode = null;
-    public static List<String> mainPathLinks = new ArrayList();
-    public static boolean isLinkDown = false;
-    public static String linkDownName = "";
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db) {
         this.db = db;
         this.session = session;
     }
 
+    @Override
+    public Future<RpcResult<Void>> test() {
+        QoSOperations qoSOperations = new QoSOperations(db);
+     //   List<LinkWithQoS> linksWithQoS = qoSOperations.getAllLinksWithQos();
+
+        Timer time = new Timer();
+        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db);
+        time.schedule(monitorLinksTask, 0, 5000);
+
+        //     for (LinkWithQoS linkWithQoS : linksWithQoS) {
+     //       System.out.println(" Link between " + linkWithQoS.getLink().getSource().getSourceNode().getValue() + " and " + linkWithQoS.getLink().getDestination().getDestNode().getValue() + " has bandwidth " + linkWithQoS.getBandwidth() + " and packet loss " + linkWithQoS.getPacketLoss() + " with duration " + linkWithQoS.getPacketDelay());
+       // }
+        return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+    }
+
     /**
      * The method which initializes the failover procedure.
      *
-     * @param input     The user input, defining the failover type and the two nodes between which
-     *                  a path will be established for traffic transmission.
+     * @param input     The user input, defining the two nodes between which a path will be established for traffic transmission.
      * @return          It returns a void future result.
      */
     @Override
     public Future<RpcResult<Void>> startFailover(StartFailoverInput input) {
-        //determine if failover will be proactive or reactive
         LOG.info("Configuring switches for resilience.");
-        if (input != null && input.isProactiveFF() != null && input.isReactiveFF() != null) {
-            if (input.isProactiveFF() && input.isReactiveFF()) {
-                LOG.info("Both choices selected. Failover will be proactive.");
-                proactiveFF = true;
-            } else if (input.isProactiveFF()) {
-                LOG.info("Failover will be proactive.");
-                proactiveFF = true;
-            } else if (input.isReactiveFF()) {
-                LOG.info("Failover will be reactive.");
-                reactiveFF = true;
-            } else if (!input.isProactiveFF() && !input.isReactiveFF()) {
-                LOG.info("Both choices selected. Failover will be proactive.");
-                proactiveFF = true;
-            }
-        }
 
         if (input.getSrcNode() != null && input.getDstNode() != null) {
             srcNode = input.getSrcNode();
@@ -99,26 +95,19 @@ public class ExampleImpl implements OdlexampleService {
             LOG.info("There is no backup path between given switches, resilience cannot be achieved. Returning...");
             return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
         }
-        if (possiblePaths.size() > 0){
-            for (DomainLink domainLink : possiblePaths.get(0).getEdgeList()){
-                //keep the links of the main path
-                mainPathLinks.add(domainLink.getLink().getLinkId().getValue());
-            }
-        }
-        //in case proactive failover has been selected, configure the switches of the main path beforehand
-        if (proactiveFF){
-            implementProactiveFailover();
-        }
+        //configure the switches of the main path beforehand
+        implementFailover();
+
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
 
     }
 
     /**
-     * The method which implements the proactive resilience. For each node of the main path, finds an alternative port (to send
+     * The method which implements the resilience. For each node of the main path, finds an alternative port (to send
      * the packet back to the ingress switch in case of a link failure) and configures the nodes before traffic generation.
      */
-    public static void implementProactiveFailover(){
-        if (proactiveFF && NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+    public static void implementFailover(){
+        if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
             Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
             DomainNode sourceNode = domainNodes.get(srcNode);
             DomainNode destNode = domainNodes.get(dstNode);
@@ -151,51 +140,7 @@ public class ExampleImpl implements OdlexampleService {
                 SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
                 switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
                 switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
-                switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
-            }
-        }
-    }
-
-    /**
-     * The method which implements the reactive resilience. When a
-     *
-     * @param linkList  The list of the links which failed, to be examined for containing or not any link of the main path. If
-     *                  a link of the main path has failed, an alternative path is computed and appropriate rules are set to
-     *                  redirect the traffic to the alternative path.
-     * @return
-     */
-    public static void implementReactiveFailover(List<Link> linkList){
-
-        Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-        DomainNode sourceNode = domainNodes.get(srcNode);
-        DomainNode destNode = domainNodes.get(dstNode);
-        /* If until now no link of the main path has failed, the failing links will be examined. If even one link of the main path
-           has failed, no links will be examined as the main path is not currently used.
-         */
-        if (!isLinkDown) {
-            if (srcNode != null && dstNode != null) {
-                for (String linkName : mainPathLinks){
-                    for (Link link : linkList) {
-                        if (linkName.equals(link.getLinkId().getValue())) {
-                            LOG.info("Link " + link.getLinkId().getValue() + " of main path is down.");
-                            isLinkDown = true;
-                            linkDownName = link.getLinkId().getValue();
-                            break;
-                        }
-                    }
-                }
-                if (isLinkDown && !linkDownName.equals("")) {
-                    //find an alternative path from the source of the failed link to the destination
-                    List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-                    if (possiblePaths.size() > 0) {
-                        GraphPath<Integer, DomainLink> reactivePath = possiblePaths.get(0);
-                        //configure reactive path - add failover flows
-                        findPorts(reactivePath, sourceNode, destNode);
-                        SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-                        switchConfigurator.configureFailoverPath(reactivePath.getEdgeList(), inputPorts, outputPorts);
-                        switchConfigurator.configureFailoverIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()));
-                    }
-                }
+         //       switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
             }
         }
     }
@@ -309,30 +254,6 @@ public class ExampleImpl implements OdlexampleService {
         //find in port for ingress node and out port for egress node, for main path
         if (!inputPorts.containsKey(sourceNode.getODLNodeID()) || !outputPorts.containsKey(destNode.getODLNodeID())) {
             findPortsForIngressAndEgressNodes(sourceNode, destNode);
-        }
-    }
-
-    /**
-     * The method which examines a given list of links added again to the graph and determines whether the failed
-     * main path is restored. If it is, the established resilience flow rules are removed from the failover path.
-     *
-     * @param linkList  The list of the links added again to the graph.
-     * @return
-     */
-    public static void linkUp(List<Link> linkList){
-        //if a link of the main path has failed
-        if (isLinkDown){
-            for (Link link : linkList){
-                if (link.getLinkId().getValue().equals(linkDownName)){
-                    System.out.println("Link " + link.getLinkId().getValue() + " is up again");
-                    //remove failover flows
-                    SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-                    switchConfigurator.removeReactiveFlows();
-                    isLinkDown = false;
-                    linkDownName = "";
-                    break;
-                }
-            }
         }
     }
 

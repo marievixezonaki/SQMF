@@ -89,7 +89,7 @@ public class SwitchConfigurator {
     }
 
     /**
-     * The method which configures the ingress (source) switch of the main path, in proactive failover.
+     * The method which configures the ingress (source) switch of the main path.
      *
      * @param sourceNode    The source node of the main path
      * @param inPort        The input port of the source node
@@ -121,7 +121,7 @@ public class SwitchConfigurator {
     }
 
     /**
-     * The method which configures the core and the egress (destination) switch of the main path, in proactive failover.
+     * The method which configures the core and the egress (destination) switch of the main path.
      *
      * @param mainPathLinks  The links of the main path
      * @param inputPorts     The input ports of the main path's nodes
@@ -158,7 +158,7 @@ public class SwitchConfigurator {
     }
 
     /**
-     * The method which configures the core and the egress (destination) switch of the failover path, in both proactive and reactive failover.
+     * The method which configures the core and the egress (destination) switch of the failover path.
      *
      * @param failoverPathLinks     The links of the failover path
      * @param inputPortsFailover    The input ports of the failover path's nodes
@@ -187,32 +187,7 @@ public class SwitchConfigurator {
     }
 
     /**
-     * The method which configures the ingress (source) switch of the failover path in reactive failover.
-     *
-     * @param sourceNode    The source node of the failover path
-     * @param inPort        The input port of the failover path's source node
-     * @param outputPort    The output port of the failover path's source node
-     * @return
-     */
-    public void configureFailoverIngress(DomainNode sourceNode, Integer inPort, Integer outputPort){
-
-        WriteTransaction transaction = db.newWriteOnlyTransaction();
-
-        String switchToConfigure = sourceNode.getODLNodeID();
-        String standardOutputPort = switchToConfigure.concat(":").concat(outputPort.toString());
-
-        //create flow
-        Flow flow = createFlow(standardOutputPort, inPort);
-        InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
-
-        //put flow into transaction
-        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
-        transaction.submit();
-
-    }
-
-    /**
-     * The method which creates a flow for a node, in both proactive and reactive failover.
+     * The method which creates a flow for a node.
      *
      * @param standardOutputPort    The output port of the node
      * @param inPort                The input port of the node
@@ -302,7 +277,7 @@ public class SwitchConfigurator {
     }
 
     /**
-     * The method which creates a flow for a failover node, in both proactive and reactive failover.
+     * The method which creates a flow for a failover node.
      *
      * @param standardOutputPort    The output port of the node
      * @param inPort                The input port of the node
@@ -465,7 +440,7 @@ public class SwitchConfigurator {
     }
 
     /**
-     * The method which creates a flow for the main path's ingress node, in proactive failover.
+     * The method which creates a flow for the main path's ingress node.
      *
      * @param standardOutputPort    The output port of the node
      * @param backupPort            The backup port of the node
@@ -582,24 +557,6 @@ public class SwitchConfigurator {
                 .augmentation(FlowCapableNode.class)
                 .child(Group.class, new GroupKey(group.getGroupId())).build();
         return groupPath;
-    }
-
-    /**
-     * The method which removes the flows added reactively.
-     */
-    public void removeReactiveFlows(){
-
-        WriteTransaction transaction = db.newWriteOnlyTransaction();
-        for (Integer flowId : mapFlowIdsToSwitches.keySet()){
-            InstanceIdentifier<Flow> flowPath = InstanceIdentifier
-                    .builder(Nodes.class)
-                    .child(Node.class, new NodeKey(new NodeId(mapFlowIdsToSwitches.get(flowId))))
-                    .augmentation(FlowCapableNode.class)
-                    .child(Table.class, new TableKey((short) 0))
-                    .child(Flow.class, new FlowKey(new FlowId(flowId.toString()))).build();
-            transaction.delete(LogicalDatastoreType.CONFIGURATION, flowPath);
-        }
-        transaction.submit();
     }
 
 }

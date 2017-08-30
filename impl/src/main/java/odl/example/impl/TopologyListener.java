@@ -67,11 +67,6 @@ public class TopologyListener implements DataChangeListener {
             }
             //update the domain graph with the added links
             graphOperations.updateGraph(NetworkGraph.getInstance(), linkList);
-            /*if a list of links is detected to be added and reactive failover has been chosen, examine if
-              a failed path has been restored (in order to remove established flow rules)*/
-            if (ExampleImpl.reactiveFF){
-                ExampleImpl.linkUp(linkList);
-            }
         }
         if (removedPaths != null && !removedPaths.isEmpty() && originalData != null && !originalData.isEmpty()) {
             linkList = new ArrayList<>();
@@ -86,11 +81,6 @@ public class TopologyListener implements DataChangeListener {
             }
             //remove the removed links from the domain graph
             graphOperations.removeFromGraph(NetworkGraph.getInstance(), linkList);
-            /*if a list of links is detected to be removed and reactive failover has been chosen, examine if
-              an active path is failing (in order to establish necessary flow rules)*/
-            if (ExampleImpl.reactiveFF){
-                ExampleImpl.implementReactiveFailover(linkList);
-            }
         }
     }
 
