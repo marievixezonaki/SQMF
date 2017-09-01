@@ -28,31 +28,49 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 /**
- * Created by maxez on 28/8/2017.
+ * The class measuring the QoS of the topology.
+ *
+ * @author Marievi Xezonaki
  */
 public class QoSOperations {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
     private DataBroker db;
+    private String pathInputPort, pathOutputPort;
+    private static HashMap<String, BigInteger> packetsTransmittedList = new HashMap<>();
+    private static HashMap<String, BigInteger> packetsReceivedList = new HashMap<>();
+    private List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = null;
 
-    public QoSOperations(DataBroker dataBroker){
+    public QoSOperations(DataBroker dataBroker, String pathInputPort, String pathOutputPort){
         this.db = dataBroker;
+        this.pathInputPort = pathInputPort;
+        this.pathOutputPort = pathOutputPort;
     }
 
+    /**
+     * The method which monitors the packet loss and delay of all links in the topology.
+     *
+     * * @return  It returns a list of links with their delay and packet loss.
+     */
     public List<LinkWithQoS> getAllLinksWithQos() {
 
         try {
-
+            nodeList = getNodes(db);
+        }catch (Exception e){
+            e.printStackTrace();
+            return null;
+        }
+        if (nodeList != null) {
             List<LinkWithQoS> linksToReturn = new ArrayList<>();
-            List<Link> links = getAllLinks(db);
-            List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = getNodes(db);
+            List<Link> links = getAllLinks();
             if (links != null) {
                 for (Link link : links) {
                     String nodeToFind = link.getSource().getSourceNode().getValue();
-                    String outputNodeConnector = link.getSource().getSourceTp().getValue();
+                    String port = link.getSource().getSourceTp().getValue();
 
                     for (org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node node : nodeList) {
 
@@ -62,22 +80,30 @@ public class QoSOperations {
 
                             for (NodeConnector nc : nodeConnectors) {
 
-                                if (nc.getId().getValue().equals(outputNodeConnector)) {
-
+                                if (nc.getId().getValue().equals(port)) {
                                     FlowCapableNodeConnectorStatisticsData statData = nc.getAugmentation(FlowCapableNodeConnectorStatisticsData.class);
                                     org.opendaylight.yang.gen.v1.urn.opendaylight.port.statistics.rev131214.flow.capable.node.connector.statistics.FlowCapableNodeConnectorStatistics statistics = statData.getFlowCapableNodeConnectorStatistics();
                                     BigInteger packetsTransmitted = statistics.getPackets().getTransmitted();
                                     BigInteger packetErrorsTransmitted = statistics.getTransmitErrors();
                                     Float packetLoss = (packetsTransmitted.floatValue() == 0) ? 0 : packetErrorsTransmitted.floatValue() / packetsTransmitted.floatValue();
-                                    Counter32 duration = statistics.getDuration().getSecond();
+                                    BigInteger packetsReceived = statistics.getPackets().getReceived();
 
-                               //     System.out.println(packetErrorsTransmitted.floatValue() + " " + packetsTransmitted.floatValue() + " dur " + duration.getValue().toString());
+                                    linksToReturn.add(new LinkWithQoS(packetLoss.longValue(), -1L, link));
+                                    if (port.equals(pathInputPort) || port.equals(pathOutputPort)) {
+                                        BigInteger packetsTransmittedThisIteration, packetsReceivedThisIteration;
+                                        if (packetsTransmittedList.containsKey(port) && (packetsReceivedList.containsKey(port))) {
+                                            packetsTransmittedThisIteration = packetsTransmitted.subtract(packetsTransmittedList.get(port));
+                                            packetsReceivedThisIteration = packetsReceived.subtract(packetsReceivedList.get(port));
+                                        } else {
+                                            packetsTransmittedThisIteration = packetsTransmitted;
+                                            packetsReceivedThisIteration = packetsReceived;
+                                        }
+                                        System.out.println("For " + port + " , packets transmitted are : " + packetsTransmittedThisIteration + " , packets received are : " + packetsReceivedThisIteration);
+                                    }
 
-                                    FlowCapableNodeConnector fcnc = nc.getAugmentation(FlowCapableNodeConnector.class);
-                                    linksToReturn.add(new LinkWithQoS(fcnc.getCurrentSpeed(), packetLoss.longValue(), duration.getValue(), link));
-
-                                    statistics.getPackets().getReceived();
-                                    System.out.println(outputNodeConnector + " packets transmitted " + packetsTransmitted.floatValue() + " packets received " + statistics.getPackets().getReceived());
+                                    //fill the maps
+                                    packetsTransmittedList.put(port, packetsTransmitted);
+                                    packetsReceivedList.put(port, packetsReceived);
                                 }
                             }
                         }
@@ -87,13 +113,16 @@ public class QoSOperations {
             } else {
                 return null;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         return null;
     }
 
-    public static List<Link> getAllLinks(DataBroker db) {
+    /**
+     * The method finds all links of the topology from the datastore.
+     *
+     * * @return  It returns a list of all links.
+     */
+    public List<Link> getAllLinks() {
         List<Link> linkList = new ArrayList<>();
 
         try {
@@ -103,21 +132,22 @@ public class QoSOperations {
             CheckedFuture<Optional<Topology>, ReadFailedException> nodesFuture = nodesTransaction
                     .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
             Optional<Topology> nodesOptional = nodesFuture.checkedGet();
-
             if (nodesOptional != null && nodesOptional.isPresent())
                 linkList = nodesOptional.get().getLink();
-
             return linkList;
         } catch (Exception e) {
-
             LOG.info("Node Fetching Failed");
-
             return linkList;
         }
 
     }
 
-    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) throws ReadFailedException {
+    /**
+     * The method finds all nodes of the topology from the datastore.
+     *
+     * * @return  It returns a list of all nodes.
+     */
+    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) {
 
         List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = new ArrayList<>();
         InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(
@@ -125,12 +155,16 @@ public class QoSOperations {
         ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
         CheckedFuture<Optional<Nodes>, ReadFailedException> nodesFuture = nodesTransaction
                 .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
-        Optional<Nodes> nodesOptional = nodesFuture.checkedGet();
+        Optional<Nodes> nodesOptional = null;
+        try {
+            nodesOptional = nodesFuture.checkedGet();
+        } catch (ReadFailedException e) {
+            e.printStackTrace();
+        }
         if (nodesOptional != null && nodesOptional.isPresent()) {
             nodeList = nodesOptional.get().getNode();
         }
 
         return nodeList;
     }
-
 }

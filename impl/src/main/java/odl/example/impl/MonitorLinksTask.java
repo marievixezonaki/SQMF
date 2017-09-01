@@ -8,24 +8,27 @@
 package odl.example.impl;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-
 import java.util.TimerTask;
-import java.util.Date;
 
 /**
- * Created by maxez on 30/8/2017.
+ * The class implementing a task which monitors the topology's links.
+ *
+ * @author Marievi Xezonaki
  */
 public class MonitorLinksTask extends TimerTask{
 
     private DataBroker db;
+    private String pathInputPort, pathOutputPort;
 
-    public MonitorLinksTask(DataBroker db){
+    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort){
         this.db = db;
+        this.pathInputPort = pathInputPort;
+        this.pathOutputPort = pathOutputPort;
     }
 
     @Override
     public void run() {
-        QoSOperations qoSOperations = new QoSOperations(db);
+        QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
         qoSOperations.getAllLinksWithQos();
         System.out.println("-----------------------------------------------------------------------------------------------------");
     }

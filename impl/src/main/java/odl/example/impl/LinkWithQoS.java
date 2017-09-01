@@ -10,26 +10,22 @@ package odl.example.impl;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
 
 /**
- * Created by Ali on 15/05/2017.
+ * The class which emulates a link with its QoS characteristics.
+ *
+ * @author Marievi Xezonaki
  */
 public class LinkWithQoS {
 
     private String linkId;
-    private Long bandwidth;
     private Long packetLoss;
     private Long packetDelay;
     private Link link;
 
-    public LinkWithQoS(Long bandwidth, Long packetLoss, Long packetDelay, Link link) {
+    public LinkWithQoS(Long packetLoss, Long packetDelay, Link link) {
         this.linkId = link.getLinkId().getValue();;
-        this.bandwidth = bandwidth;
         this.packetLoss = packetLoss;
         this.packetDelay = packetDelay;
         this.link = link;
-    }
-
-    public Long getBandwidth(){
-        return this.bandwidth;
     }
 
     public Long getPacketLoss(){

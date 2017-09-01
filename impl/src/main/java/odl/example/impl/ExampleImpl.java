@@ -50,18 +50,15 @@ public class ExampleImpl implements OdlexampleService {
         this.session = session;
     }
 
+    /**
+     * The method which starts monitoring the packet loss and delay of links, when the user asks it.
+     */
     @Override
-    public Future<RpcResult<Void>> test() {
-        QoSOperations qoSOperations = new QoSOperations(db);
-     //   List<LinkWithQoS> linksWithQoS = qoSOperations.getAllLinksWithQos();
-
+    public Future<RpcResult<Void>> startMonitoringLinks() {
         Timer time = new Timer();
-        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db);
+        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2");
         time.schedule(monitorLinksTask, 0, 5000);
 
-        //     for (LinkWithQoS linkWithQoS : linksWithQoS) {
-     //       System.out.println(" Link between " + linkWithQoS.getLink().getSource().getSourceNode().getValue() + " and " + linkWithQoS.getLink().getDestination().getDestNode().getValue() + " has bandwidth " + linkWithQoS.getBandwidth() + " and packet loss " + linkWithQoS.getPacketLoss() + " with duration " + linkWithQoS.getPacketDelay());
-       // }
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 
@@ -101,6 +98,7 @@ public class ExampleImpl implements OdlexampleService {
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
 
     }
+
 
     /**
      * The method which implements the resilience. For each node of the main path, finds an alternative port (to send
