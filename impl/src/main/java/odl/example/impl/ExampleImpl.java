@@ -55,6 +55,7 @@ public class ExampleImpl implements OdlexampleService {
      */
     @Override
     public Future<RpcResult<Void>> startMonitoringLinks() {
+
         Timer time = new Timer();
         MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2");
         time.schedule(monitorLinksTask, 0, 5000);
