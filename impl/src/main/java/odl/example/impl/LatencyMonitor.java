@@ -36,12 +36,12 @@ public class LatencyMonitor {
     private static  HashMap<Link, Long> jitters = new HashMap<>();
     private static ArrayList<Link> links = new ArrayList<>();
     private static PacketProcessingService packetProcessingService;
-  //  private static PacketSender packetSender;
+    private static PacketSender packetSender;
 
     public LatencyMonitor(DataBroker dataBroker, PacketProcessingService packetProcessingService){
         this.packetProcessingService = packetProcessingService;
         db = dataBroker;
-   //     packetSender = new PacketSender(packetProcessingService);
+        packetSender = new PacketSender(packetProcessingService);
     }
 
     public Long MeasureNextLink(Link link) {
@@ -49,7 +49,7 @@ public class LatencyMonitor {
         latency = -1L;
         String node_id = link.getSource().getSourceNode().getValue();
         String node_connector_id = link.getSource().getSourceTp().getValue();
-     //   boolean success = packetSender.sendPacket(0, node_connector_id,node_id  );
+        packetSender.sendPacket(0, node_connector_id, node_id );
         while(latency == -1) {
         }
         return latency;

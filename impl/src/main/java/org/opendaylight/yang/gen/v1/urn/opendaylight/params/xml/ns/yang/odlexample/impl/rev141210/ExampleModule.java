@@ -8,6 +8,8 @@ package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexam
 import odl.example.impl.ExampleProvider;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.impl.rev141210.modules.module.configuration.odlexample.RpcRegistry;
 
 import javax.xml.crypto.Data;
 
@@ -28,8 +30,8 @@ public class ExampleModule extends org.opendaylight.yang.gen.v1.urn.opendaylight
     public java.lang.AutoCloseable createInstance() {
 
         NotificationProviderService notificationService = getNotificationServiceDependency();
-
-        ExampleProvider provider = new ExampleProvider(notificationService);
+        RpcProviderRegistry rpcProviderRegistry = getRpcRegistryDependency();
+        ExampleProvider provider = new ExampleProvider(notificationService, rpcProviderRegistry);
         getBrokerDependency().registerProvider(provider);
         return provider;
     }

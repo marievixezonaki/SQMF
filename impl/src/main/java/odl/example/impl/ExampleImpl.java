@@ -13,6 +13,7 @@ import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.*;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
@@ -44,10 +45,12 @@ public class ExampleImpl implements OdlexampleService {
     private static DataBroker db;
     public static String srcNode = null;
     public static String dstNode = null;
+    private RpcProviderRegistry rpcProviderRegistry;
 
-    public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db) {
+    public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry) {
         this.db = db;
         this.session = session;
+        this.rpcProviderRegistry = rpcProviderRegistry;
     }
 
     /**
@@ -57,7 +60,7 @@ public class ExampleImpl implements OdlexampleService {
     public Future<RpcResult<Void>> startMonitoringLinks() {
 
         Timer time = new Timer();
-        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2");
+        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2", rpcProviderRegistry);
         time.schedule(monitorLinksTask, 0, 5000);
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());

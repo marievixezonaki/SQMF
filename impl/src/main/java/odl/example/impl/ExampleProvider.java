@@ -14,6 +14,7 @@ import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.ProviderContext;
 import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
 import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -30,15 +31,18 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
     private BindingAwareBroker.RpcRegistration<OdlexampleService> exampleService;
     private NotificationProviderService notificationService;
     private DataBroker db;
+    private RpcProviderRegistry rpcProviderRegistry;
 
-    public ExampleProvider(NotificationProviderService notificationProviderService){
+    public ExampleProvider(NotificationProviderService notificationProviderService, RpcProviderRegistry rpcProviderRegistry){
         this.notificationService = notificationService;
+    //    this.rpcProviderRegistry = rpcProviderRegistry;
         this.db = db;
     }
 
     @Override
     public void onSessionInitiated(ProviderContext session) {
 
+        RpcProviderRegistry rpcProviderRegistry = session.getSALService(RpcProviderRegistry.class);
 
         LOG.info("ExampleProvider Session Initiated");
         DataBroker db = session.getSALService(DataBroker.class);
@@ -49,10 +53,11 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
         db.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, linkInstance,
                 new TopologyListener(db, notificationService),
                 AsyncDataBroker.DataChangeScope.BASE);
+
         LOG.info("Topology Listener set");
 
         //starting the ExampleImpl class
-        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db));
+        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db, rpcProviderRegistry));
     }
 
     @Override

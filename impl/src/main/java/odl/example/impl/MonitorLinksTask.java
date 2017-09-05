@@ -8,6 +8,7 @@
 package odl.example.impl;
 
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.TransmitPacketInput;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
@@ -27,11 +28,13 @@ public class MonitorLinksTask extends TimerTask{
     private DataBroker db;
     private String pathInputPort, pathOutputPort;
     private PacketProcessingService packetProcessingService;
+    private RpcProviderRegistry rpcProviderRegistry;
 
-    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort){
+    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry){
         this.db = db;
         this.pathInputPort = pathInputPort;
         this.pathOutputPort = pathOutputPort;
+        this.rpcProviderRegistry = rpcProviderRegistry;
     }
 
     @Override
@@ -39,15 +42,24 @@ public class MonitorLinksTask extends TimerTask{
 
         //monitor packet loss and delay
         QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
-        qoSOperations.getAllLinksWithQos();
+      //  qoSOperations.getAllLinksWithQos();
 
-     /*   LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
-        List<Link> linkList = latencyMonitor.getAllLinks();
-        for (Link link : linkList) {
-            Long latency = latencyMonitor.MeasureNextLink(link);
-            System.out.println("Latency for " + link.getSource().getSourceNode().getValue() + "-->" + link.getDestination().getDestNode().getValue() + " is " + latency);
-        }*/
+       // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
+        if (rpcProviderRegistry != null) {
+            packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
+            LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
+            List<Link> linkList = latencyMonitor.getAllLinks();
+            for (Link link : linkList) {
+                Long latency = latencyMonitor.MeasureNextLink(link);
+                System.out.println("Latency for " + link.getSource().getSourceNode().getValue() + "-->" + link.getDestination().getDestNode().getValue() + " is " + latency);
+            }
+        }
+        else{
+            System.out.println("null");
+
+
+        }
         System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 

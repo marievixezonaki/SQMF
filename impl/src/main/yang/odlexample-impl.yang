@@ -38,7 +38,14 @@ module odlexample-impl {
                   }
                }
             }
-
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory false;
+                        config:required-identity md-sal-binding:binding-rpc-registry;
+                    }
+                }
+            }
 
         }
     }
