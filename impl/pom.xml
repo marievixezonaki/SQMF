@@ -95,6 +95,16 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
           <groupId>com.sun.jersey</groupId>
           <artifactId>jersey-server</artifactId>
       </dependency>
+      <dependency>
+          <groupId>org.opendaylight.controller</groupId>
+          <artifactId>liblldp</artifactId>
+          <version>0.11.1-Boron-SR1</version>
+      </dependency>
+    <dependency>
+      <groupId>org.opendaylight.openflowplugin.applications</groupId>
+      <artifactId>topology-lldp-discovery</artifactId>
+      <version>0.3.1-Boron-SR1</version>
+    </dependency>
   </dependencies>
 
 </project>

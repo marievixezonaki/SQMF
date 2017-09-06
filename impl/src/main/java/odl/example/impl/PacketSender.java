@@ -90,7 +90,7 @@ public class PacketSender {
         TransmitPacketInput packet = new TransmitPacketInputBuilder()
                 .setEgress(nEgressConfRef)
                 .setNode(ref)
-          //      .setPayload(lldpFrame)
+                .setPayload(lldpFrame)
                 .setAction(actions)
                 .build();
 

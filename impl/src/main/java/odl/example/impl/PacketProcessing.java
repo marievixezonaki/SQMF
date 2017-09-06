@@ -38,7 +38,7 @@ public class PacketProcessing implements PacketProcessingListener {
     public void onPacketReceived(PacketReceived packetReceived) {
 
         byte[] payload = packetReceived.getPayload();
-        LOG.info("Packet Received");
+        System.out.println("Packet received");
 
         MacAddress srcMacAddress = new MacAddress("00:00:00:00:00:09");
 

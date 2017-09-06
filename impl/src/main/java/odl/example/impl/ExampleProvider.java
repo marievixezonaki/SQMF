@@ -10,11 +10,8 @@ package odl.example.impl;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.binding.api.*;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.ProviderContext;
-import org.opendaylight.controller.sal.binding.api.BindingAwareProvider;
-import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
-import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
@@ -24,6 +21,9 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
 
@@ -43,7 +43,6 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
     public void onSessionInitiated(ProviderContext session) {
 
         RpcProviderRegistry rpcProviderRegistry = session.getSALService(RpcProviderRegistry.class);
-
         LOG.info("ExampleProvider Session Initiated");
         DataBroker db = session.getSALService(DataBroker.class);
 
@@ -53,8 +52,16 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
         db.registerDataChangeListener(LogicalDatastoreType.OPERATIONAL, linkInstance,
                 new TopologyListener(db, notificationService),
                 AsyncDataBroker.DataChangeScope.BASE);
-
         LOG.info("Topology Listener set");
+        PacketProcessing packetProcessingListener = new PacketProcessing();
+   //     this.notificationService.registerNotificationListener(packetProcessingListener);
+        if (notificationService != null) {
+            notificationService.registerNotificationListener(packetProcessingListener);
+        }
+        else{
+            System.out.println("null");
+        }
+        System.out.println("Registered packet processing listener");
 
         //starting the ExampleImpl class
         exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db, rpcProviderRegistry));

@@ -31,7 +31,7 @@ public final class LLDPUtils {
                                         final Long outPortNo,
                                         final MacAddress destinationAddress) {
         // Create discovery pkt
-    /*    LLDP discoveryPkt = new LLDP();
+        LLDP discoveryPkt = new LLDP();
 
         // Create LLDP ChassisID TLV
         BigInteger dataPathId = dataPathIdFromNodeId(nodeId);
@@ -109,7 +109,7 @@ public final class LLDPUtils {
         } catch (PacketException e) {
             LOG.warn("Error creating LLDP packet: {}", e.getMessage());
             LOG.debug("Error creating LLDP packet.. ", e);
-        }*/
+        }
         return null;
     }
 
