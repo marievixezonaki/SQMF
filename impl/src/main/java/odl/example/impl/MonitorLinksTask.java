@@ -31,6 +31,7 @@ public class MonitorLinksTask extends TimerTask{
     private PacketProcessingService packetProcessingService;
     private RpcProviderRegistry rpcProviderRegistry;
     private List<Long> latencies = new ArrayList<>();
+    private Integer ingressPackets = 0, egressPackets = 0;
 
     public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry){
         this.db = db;
@@ -43,11 +44,22 @@ public class MonitorLinksTask extends TimerTask{
     public void run() {
 
         //monitor packet loss and delay
-        QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
-      //  qoSOperations.getAllLinksWithQos();
+   //     QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
+   //     qoSOperations.getAllLinksWithQos();
 
-       // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
-        if (rpcProviderRegistry != null) {
+        Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
+        Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
+        Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
+
+        ingressPackets = PacketProcessing.ingressUdpPackets;
+        egressPackets = PacketProcessing.egressUdpPackets;
+
+        System.out.println("Ingress node has sent " + currentIngressPackets);
+        System.out.println("Egress node has received " + currentEgressPackets);
+        System.out.println("Packet loss is " + lostUdpPackets);
+
+        // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
+    /*    if (rpcProviderRegistry != null) {
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
             LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
@@ -65,12 +77,12 @@ public class MonitorLinksTask extends TimerTask{
         //compute path's total delay
         if (latencies.size() > 0){
             totalDelay = qoSOperations.computeTotalDelay(latencies);
-        }
+        }*/
 
         //compute path's total packet loss
        // qoSOperations.QoEEstimation(totalpacketLoss, totalDelay);
 
-      //  System.out.println("-----------------------------------------------------------------------------------------------------");
+        System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
 }

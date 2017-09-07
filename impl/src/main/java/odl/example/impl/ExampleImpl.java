@@ -13,6 +13,7 @@ import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.*;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;;
@@ -46,11 +47,13 @@ public class ExampleImpl implements OdlexampleService {
     public static String srcNode = null;
     public static String dstNode = null;
     private RpcProviderRegistry rpcProviderRegistry;
+    private NotificationProviderService notificationService;
 
-    public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry) {
+    public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
         this.session = session;
         this.rpcProviderRegistry = rpcProviderRegistry;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -59,6 +62,33 @@ public class ExampleImpl implements OdlexampleService {
     @Override
     public Future<RpcResult<Void>> startMonitoringLinks() {
 
+        //TODO : change way of obtaining srcNode and dstNode
+        srcNode = "openflow:1";
+        dstNode = "openflow:8";
+
+        //first, add rules to ingress and egress nodes to forward their packets to controller
+        if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+            Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+            DomainNode sourceNode = domainNodes.get(srcNode);
+            DomainNode destNode = domainNodes.get(dstNode);
+
+            List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+            if (possiblePaths.size() > 1) {
+                GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
+                findPorts(mainPath, sourceNode, destNode);
+                //register packet processing listener
+                PacketProcessing packetProcessingListener = new PacketProcessing(inputPorts, outputPorts, srcNode, dstNode);
+                if (notificationService != null) {
+                    notificationService.registerNotificationListener(packetProcessingListener);
+                    System.out.println("Registered packet processing listener");
+                }
+            }
+        }
+
+        SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+        switchConfigurator.configureIngressAndEgressForMonitoring("openflow:1", "openflow:8", inputPorts, outputPorts);
+
+        //then, start monitoring links
         Timer time = new Timer();
         MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2", rpcProviderRegistry);
         time.schedule(monitorLinksTask, 0, 5000);

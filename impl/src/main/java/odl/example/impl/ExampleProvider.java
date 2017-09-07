@@ -55,7 +55,7 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
                 new TopologyListener(db, notificationService),
                 AsyncDataBroker.DataChangeScope.BASE);
         LOG.info("Topology Listener set");
-        PacketProcessing packetProcessingListener = new PacketProcessing();
+  /*      PacketProcessing packetProcessingListener = new PacketProcessing();
 
    //     this.notificationService.registerNotificationListener(packetProcessingListener);
         if (notificationService != null) {
@@ -65,9 +65,9 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
         else{
             System.out.println("null");
         }
-
+*/
         //starting the ExampleImpl class
-        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db, rpcProviderRegistry));
+        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db, rpcProviderRegistry, notificationService));
     }
 
     @Override

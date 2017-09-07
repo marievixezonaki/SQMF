@@ -559,6 +559,99 @@ public class SwitchConfigurator {
         return groupPath;
     }
 
+    public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
+
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+
+        //create flows and groups
+        Flow flowForIngress = createIngressAndEgressFlowForMonitoring(inputPorts.get(ingressSwitch), outputPorts.get(ingressSwitch));
+        InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(ingressSwitch, flowForIngress);
+        Flow flowForEgress = createIngressAndEgressFlowForMonitoring(inputPorts.get(egressSwitch), outputPorts.get(egressSwitch));
+        InstanceIdentifier<Flow> instanceIdentifierFailover = createInstanceIdentifierForFlow(egressSwitch, flowForEgress);
+
+        //put flows into transaction
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flowForIngress, true);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierFailover, flowForEgress, true);
+
+        transaction.submit();
+    }
+
+    private Flow createIngressAndEgressFlowForMonitoring(Integer inPort, Integer outPort){
+
+        FlowBuilder flowBuilder = new FlowBuilder()
+                .setTableId((short) 0)
+                .setFlowName("flow" + flowId)
+                .setId(new FlowId(flowId.toString()));
+        flowId++;
+
+        NodeConnectorId inputPort = new NodeConnectorId(inPort.toString());
+
+        Match match = new MatchBuilder()
+                .setEthernetMatch(new EthernetMatchBuilder()
+                        .setEthernetType(new EthernetTypeBuilder()
+                                .setType(new EtherType(IP_ETHERTYPE.longValue()))
+                                .build())
+                        .build())
+                .setIpMatch(new IpMatchBuilder()
+                        .setIpProtocol(UDP_PROTOCOL.shortValue())
+                        .build())
+                .setInPort(inputPort)
+                .build();
+
+        ActionBuilder actionBuilder = new ActionBuilder();
+        List<Action> actions = new ArrayList<Action>();
+
+        //output to controller
+        Action outputToControllerAction = actionBuilder
+                .setOrder(0).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setMaxLength(65535)
+                                .setOutputNodeConnector(new Uri(OutputPortValues.CONTROLLER.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputToControllerAction);
+
+        Action outputNodeConnectorAction = actionBuilder
+                .setOrder(1).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setOutputNodeConnector(new Uri(outPort.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputNodeConnectorAction);
+
+        //ApplyActions
+        ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();
+        List<Instruction> instructions = new ArrayList<>();
+
+        //Instruction for Actions
+        Instruction applyActionsInstruction = new InstructionBuilder()
+                .setOrder(0).setInstruction(new ApplyActionsCaseBuilder()
+                        .setApplyActions(applyActions)
+                        .build())
+                .build();
+
+        instructions.add(applyActionsInstruction);
+
+        //Build all the instructions together, based on the Instructions list
+        Instructions allInstructions = new InstructionsBuilder()
+                .setInstruction(instructions)
+                .build();
+
+        flowBuilder
+                .setMatch(match)
+                .setBufferId(OFConstants.OFP_NO_BUFFER)
+                .setInstructions(allInstructions)
+                .setPriority(1000)
+                .setHardTimeout(30000)
+                .setIdleTimeout(30000)
+                .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
+                .setFlags(new FlowModFlags(false, false, false, false, false));
+
+        return flowBuilder.build();
+    }
+
 }
 
 
