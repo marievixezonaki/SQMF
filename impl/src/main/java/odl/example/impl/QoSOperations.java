@@ -169,6 +169,20 @@ public class QoSOperations {
     }
 
     /**
+     * The method which computes the total delay of a path.
+     *
+     * @param delays    A list containing the delay of each link in the path.
+     * @return          It returns the path's total delay.
+     */
+    public Long computeTotalDelay(List<Long> delays){
+        Long totalDelay = 0L;
+        for (Long delay : delays){
+            totalDelay += delay;
+        }
+        return totalDelay;
+    }
+
+    /**
      * The method which estimates the current QoE based on the ITU-T E-model.
      *
      * * @return  It returns the MOS value estimation.

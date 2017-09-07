@@ -28,13 +28,7 @@ public class ExampleModule extends org.opendaylight.yang.gen.v1.urn.opendaylight
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-
-        NotificationProviderService notificationService = getNotificationServiceDependency();
-        if (notificationService == null){
-            System.out.println("NULLL");
-        }
-        RpcProviderRegistry rpcProviderRegistry = getRpcRegistryDependency();
-        ExampleProvider provider = new ExampleProvider(getNotificationServiceDependency(), rpcProviderRegistry);
+        ExampleProvider provider = new ExampleProvider();
         getBrokerDependency().registerProvider(provider);
         return provider;
     }

@@ -33,7 +33,7 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
     private DataBroker db;
     private RpcProviderRegistry rpcProviderRegistry;
 
-    public ExampleProvider(NotificationProviderService notificationProviderService, RpcProviderRegistry rpcProviderRegistry){
+    public ExampleProvider(){
         this.notificationService = notificationService;
     //    this.rpcProviderRegistry = rpcProviderRegistry;
         this.db = db;
@@ -42,7 +42,9 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
     @Override
     public void onSessionInitiated(ProviderContext session) {
 
-        RpcProviderRegistry rpcProviderRegistry = session.getSALService(RpcProviderRegistry.class);
+        rpcProviderRegistry = session.getSALService(RpcProviderRegistry.class);
+        notificationService = session.getSALService(NotificationProviderService.class);
+
         LOG.info("ExampleProvider Session Initiated");
         DataBroker db = session.getSALService(DataBroker.class);
 
@@ -54,14 +56,15 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
                 AsyncDataBroker.DataChangeScope.BASE);
         LOG.info("Topology Listener set");
         PacketProcessing packetProcessingListener = new PacketProcessing();
+
    //     this.notificationService.registerNotificationListener(packetProcessingListener);
         if (notificationService != null) {
             notificationService.registerNotificationListener(packetProcessingListener);
+            System.out.println("Registered packet processing listener");
         }
         else{
             System.out.println("null");
         }
-        System.out.println("Registered packet processing listener");
 
         //starting the ExampleImpl class
         exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db, rpcProviderRegistry));

@@ -14,6 +14,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.Tr
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.Future;
@@ -29,6 +30,7 @@ public class MonitorLinksTask extends TimerTask{
     private String pathInputPort, pathOutputPort;
     private PacketProcessingService packetProcessingService;
     private RpcProviderRegistry rpcProviderRegistry;
+    private List<Long> latencies = new ArrayList<>();
 
     public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry){
         this.db = db;
@@ -52,15 +54,23 @@ public class MonitorLinksTask extends TimerTask{
             List<Link> linkList = latencyMonitor.getAllLinks();
             for (Link link : linkList) {
                 Long latency = latencyMonitor.MeasureNextLink(link);
+                latencies.add(latency);
                 System.out.println("Latency for " + link.getSource().getSourceNode().getValue() + "-->" + link.getDestination().getDestNode().getValue() + " is " + latency);
             }
         }
-        else{
-            System.out.println("null");
 
+        //TODO : check if there are latencies for all links
+        Long totalDelay = 0L, totalpacketLoss = 0L;
 
+        //compute path's total delay
+        if (latencies.size() > 0){
+            totalDelay = qoSOperations.computeTotalDelay(latencies);
         }
-        System.out.println("-----------------------------------------------------------------------------------------------------");
+
+        //compute path's total packet loss
+       // qoSOperations.QoEEstimation(totalpacketLoss, totalDelay);
+
+      //  System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
 }

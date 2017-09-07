@@ -23,10 +23,6 @@ import java.util.List;
 public class PacketProcessing implements PacketProcessingListener {
 
     private final Logger LOG = LoggerFactory.getLogger(PacketProcessing.class);
-    private final static long FLOOD_PORT_NUMBER = 0xfffffffbL;
-    private List<Registration> registrations;
-    private DataBroker dataBroker;
-    private PacketProcessingService packetProcessingService;
     private List<String> dstMacs;
 
     public PacketProcessing() {
@@ -38,12 +34,14 @@ public class PacketProcessing implements PacketProcessingListener {
     public void onPacketReceived(PacketReceived packetReceived) {
 
         byte[] payload = packetReceived.getPayload();
-        System.out.println("Packet received");
+        String protocol;
+        byte p = PacketParsingUtils.extractIPprotocol(payload);
+        if (p == 0x11) {
+            protocol = "UDP";
+            System.out.print("Received UDP packet");
+        }
 
-        MacAddress srcMacAddress = new MacAddress("00:00:00:00:00:09");
-
-        byte[] lldpFrame = LLDPUtils.buildLldpFrame(new NodeId("openflow:1"),
-                new NodeConnectorId("openflow:1:2"), srcMacAddress, 2L, null);
+     //   System.out.println("Packet received");
 
 /*
         byte[] srcMacRaw = PacketParsingUtils.extractSrcMac(payload);
@@ -75,23 +73,18 @@ public class PacketProcessing implements PacketProcessingListener {
           /*  System.out.println("Got the packet    " + System.currentTimeMillis());
             System.out.println("latency is " + (System.currentTimeMillis() - PacketSender.sentTime ) );
 */
-            LOG.info("Yaaay, got the packet");
-            LOG.debug("YUp");
-            LOG.error("Packet is here ");
         }
 
-        LOG.info("src mac -----------"+srcMac);
         byte[] dstMacRaw = PacketParsingUtils.extractDstMac(payload);
         String dstMac = PacketParsingUtils.rawMacToString(dstMacRaw);
-        LOG.info("dest mac ------------"+dstMac);
-        String protocol;
+/*        String protocol;
         byte p = PacketParsingUtils.extractIPprotocol(payload);
         if (p == 0x11)
             protocol = "UDP";
         else
             protocol = "TCP";
-
-        int port = PacketParsingUtils.extractDestPort(payload);
+*/
+   //     int port = PacketParsingUtils.extractDestPort(payload);
 
   /*      if (isDestination(dstMac)) {
             forwardPacket(srcMac, dstMac, srcIp, dstIp);

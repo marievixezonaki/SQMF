@@ -47,9 +47,9 @@ public class LatencyMonitor {
     public Long MeasureNextLink(Link link) {
 
         latency = -1L;
-        String node_id = link.getSource().getSourceNode().getValue();
-        String node_connector_id = link.getSource().getSourceTp().getValue();
-        packetSender.sendPacket(0, node_connector_id, node_id );
+        String nodeConnectorId = link.getSource().getSourceTp().getValue();
+        String nodeId = link.getSource().getSourceNode().getValue();
+        packetSender.sendPacket(0, nodeConnectorId, nodeId);
         while(latency == -1) {
         }
         return latency;

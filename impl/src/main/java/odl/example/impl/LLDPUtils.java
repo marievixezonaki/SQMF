@@ -91,7 +91,6 @@ public final class LLDPUtils {
             LOG.debug("Reason why LLDP extra authenticator creation failed: ", e1);
         }
 
-
         // Create ethernet pkt
         byte[] sourceMac = HexEncode.bytesFromHexString(src.getValue());
         Ethernet ethPkt = new Ethernet();
