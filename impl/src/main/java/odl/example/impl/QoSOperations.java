@@ -40,81 +40,12 @@ public class QoSOperations {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
     private DataBroker db;
-    private String pathInputPort, pathOutputPort;
     private static HashMap<String, BigInteger> packetsTransmittedList = new HashMap<>();
     private static HashMap<String, BigInteger> packetsReceivedList = new HashMap<>();
     private List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = null;
 
-    public QoSOperations(DataBroker dataBroker, String pathInputPort, String pathOutputPort){
+    public QoSOperations(DataBroker dataBroker){
         this.db = dataBroker;
-        this.pathInputPort = pathInputPort;
-        this.pathOutputPort = pathOutputPort;
-    }
-
-    /**
-     * The method which monitors the packet loss and delay of all links in the topology.
-     *
-     * * @return  It returns a list of links with their delay and packet loss.
-     */
-    public List<LinkWithQoS> getAllLinksWithQos() {
-
-        try {
-            nodeList = getNodes(db);
-        }catch (Exception e){
-            e.printStackTrace();
-            return null;
-        }
-        if (nodeList != null) {
-            List<LinkWithQoS> linksToReturn = new ArrayList<>();
-            List<Link> links = getAllLinks();
-            if (links != null) {
-                for (Link link : links) {
-                    String nodeToFind = link.getSource().getSourceNode().getValue();
-                    String port = link.getSource().getSourceTp().getValue();
-
-                    for (org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node node : nodeList) {
-
-                        if (node.getId().getValue().equals(nodeToFind)) {
-
-                            List<NodeConnector> nodeConnectors = node.getNodeConnector();
-
-                            for (NodeConnector nc : nodeConnectors) {
-
-                                if (nc.getId().getValue().equals(port)) {
-                                    FlowCapableNodeConnectorStatisticsData statData = nc.getAugmentation(FlowCapableNodeConnectorStatisticsData.class);
-                                    org.opendaylight.yang.gen.v1.urn.opendaylight.port.statistics.rev131214.flow.capable.node.connector.statistics.FlowCapableNodeConnectorStatistics statistics = statData.getFlowCapableNodeConnectorStatistics();
-                                    BigInteger packetsTransmitted = statistics.getPackets().getTransmitted();
-                                    BigInteger packetErrorsTransmitted = statistics.getTransmitErrors();
-                                    Float packetLoss = (packetsTransmitted.floatValue() == 0) ? 0 : packetErrorsTransmitted.floatValue() / packetsTransmitted.floatValue();
-                                    BigInteger packetsReceived = statistics.getPackets().getReceived();
-
-                                    linksToReturn.add(new LinkWithQoS(packetLoss.longValue(), -1L, link));
-                                    if (port.equals(pathInputPort) || port.equals(pathOutputPort)) {
-                                        BigInteger packetsTransmittedThisIteration, packetsReceivedThisIteration;
-                                        if (packetsTransmittedList.containsKey(port) && (packetsReceivedList.containsKey(port))) {
-                                            packetsTransmittedThisIteration = packetsTransmitted.subtract(packetsTransmittedList.get(port));
-                                            packetsReceivedThisIteration = packetsReceived.subtract(packetsReceivedList.get(port));
-                                        } else {
-                                            packetsTransmittedThisIteration = packetsTransmitted;
-                                            packetsReceivedThisIteration = packetsReceived;
-                                        }
-                                        System.out.println("For " + port + " , packets transmitted are : " + packetsTransmittedThisIteration + " , packets received are : " + packetsReceivedThisIteration);
-                                    }
-
-                                    //fill the maps
-                                    packetsTransmittedList.put(port, packetsTransmitted);
-                                    packetsReceivedList.put(port, packetsReceived);
-                                }
-                            }
-                        }
-                    }
-                }
-                return linksToReturn;
-            } else {
-                return null;
-            }
-        }
-        return null;
     }
 
     /**

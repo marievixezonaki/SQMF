@@ -17,6 +17,7 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.openflowplugin.api.OFConstants;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.GroupActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.OutputActionCaseBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.action.types.rev131112.action.action.group.action._case.GroupActionBuilder;
@@ -57,6 +58,7 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetSourceBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.IpMatchBuilder;
@@ -268,8 +270,6 @@ public class SwitchConfigurator {
                 .setBufferId(OFConstants.OFP_NO_BUFFER)
                 .setInstructions(allInstructions)
                 .setPriority(1000)
-                .setHardTimeout(30000)
-                .setIdleTimeout(30000)
                 .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
                 .setFlags(new FlowModFlags(false, false, false, false, false));
 
@@ -345,8 +345,6 @@ public class SwitchConfigurator {
                 .setBufferId(OFConstants.OFP_NO_BUFFER)
                 .setInstructions(allInstructions)
                 .setPriority(1000)
-                .setHardTimeout(30000)
-                .setIdleTimeout(30000)
                 .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
                 .setFlags(new FlowModFlags(false, false, false, false, false));
 
@@ -654,14 +652,85 @@ public class SwitchConfigurator {
                 .setBufferId(OFConstants.OFP_NO_BUFFER)
                 .setInstructions(allInstructions)
                 .setPriority(1000)
-                .setHardTimeout(30000)
-                .setIdleTimeout(30000)
                 .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
                 .setFlags(new FlowModFlags(false, false, false, false, false));
 
         return flowBuilder.build();
     }
 
+    public void configureNodesForDelayMonitoring(List<DomainLink> links, String srcMac){
+
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+
+        for (DomainLink link : links){
+         //   System.out.println("Link " + link.getLink().getSource().getSourceNode().getValue() + " --> " + link.getLink().getDestination().getDestNode().getValue());
+
+            String switchToConfigure = link.getLink().getDestination().getDestNode().getValue();
+            Flow flow = createFlowForDelayMonitoring(srcMac);
+            InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
+            transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
+        }
+
+        transaction.submit();
+    }
+
+    public Flow createFlowForDelayMonitoring(String srcMac){
+
+        FlowBuilder flowBuilder = new FlowBuilder()
+                .setTableId((short) 0)
+                .setFlowName("flow" + flowId)
+                .setId(new FlowId(flowId.toString()));
+        flowId++;
+
+        Match match = new MatchBuilder()
+                .setEthernetMatch(new EthernetMatchBuilder()
+                        .setEthernetSource(new EthernetSourceBuilder()
+                                .setAddress(new MacAddress(srcMac))
+                        .build())
+                        .build())
+                .build();
+
+        ActionBuilder actionBuilder = new ActionBuilder();
+        List<Action> actions = new ArrayList<Action>();
+
+        //output to controller
+        Action outputToControllerAction = actionBuilder
+                .setOrder(0).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setMaxLength(65535)
+                                .setOutputNodeConnector(new Uri(OutputPortValues.CONTROLLER.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputToControllerAction);
+
+        //ApplyActions
+        ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();
+        List<Instruction> instructions = new ArrayList<>();
+
+        //Instruction for Actions
+        Instruction applyActionsInstruction = new InstructionBuilder()
+                .setOrder(0).setInstruction(new ApplyActionsCaseBuilder()
+                        .setApplyActions(applyActions)
+                        .build())
+                .build();
+
+        instructions.add(applyActionsInstruction);
+
+        //Build all the instructions together, based on the Instructions list
+        Instructions allInstructions = new InstructionsBuilder()
+                .setInstruction(instructions)
+                .build();
+
+        flowBuilder
+                .setMatch(match)
+                .setBufferId(OFConstants.OFP_NO_BUFFER)
+                .setInstructions(allInstructions)
+                .setPriority(1000)
+                .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
+                .setFlags(new FlowModFlags(false, false, false, false, false));
+
+        return flowBuilder.build();    }
 }
 
 

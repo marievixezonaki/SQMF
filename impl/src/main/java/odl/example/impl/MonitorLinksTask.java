@@ -32,25 +32,27 @@ public class MonitorLinksTask extends TimerTask{
     private RpcProviderRegistry rpcProviderRegistry;
     private List<Long> latencies = new ArrayList<>();
     private Integer ingressPackets = 0, egressPackets = 0;
+    String sourceMac;
 
-    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry){
+    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry, String srcMac){
         this.db = db;
         this.pathInputPort = pathInputPort;
         this.pathOutputPort = pathOutputPort;
         this.rpcProviderRegistry = rpcProviderRegistry;
+        this.sourceMac = srcMac;
     }
 
     @Override
     public void run() {
 
         //monitor packet loss and delay
-   //     QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
+        QoSOperations qoSOperations = new QoSOperations(db);
    //     qoSOperations.getAllLinksWithQos();
 
         //monitor packet loss
    //     PacketLossMonitor packetLossMonitor = new PacketLossMonitor();
   //      double totalPacketLoss = packetLossMonitor.monitorPacketLoss();
-        Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
+   /*     Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
 
@@ -67,18 +69,24 @@ public class MonitorLinksTask extends TimerTask{
         }
      //   System.out.println("Ingress node has sent " + PacketProcessing.ingressUdpPackets + " " + currentIngressPackets);
      //   System.out.println("Egress node has received " + PacketProcessing.egressUdpPackets + " " + currentEgressPackets);
-        System.out.println("Packet loss is " + packetLoss);
+        System.out.println("Packet loss is " + packetLoss);*/
 
         // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
-    /*    if (rpcProviderRegistry != null) {
+        if (rpcProviderRegistry != null) {
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
             LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
-            List<Link> linkList = latencyMonitor.getAllLinks();
-            for (Link link : linkList) {
-                Long latency = latencyMonitor.MeasureNextLink(link);
-                latencies.add(latency);
-                System.out.println("Latency for " + link.getSource().getSourceNode().getValue() + "-->" + link.getDestination().getDestNode().getValue() + " is " + latency);
+            //List<Link> linkList = latencyMonitor.getAllLinks();
+            List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
+            for (DomainLink link : linkList) {
+                if (!link.getLink().getLinkId().getValue().contains("host")) {
+                    Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac);
+                    latencies.add(latency);
+                    System.out.println("Latency for " + link.getLink().getSource().getSourceNode().getValue() + "-->" + link.getLink().getDestination().getDestNode().getValue() + " is " + latency);
+                }
+                else{
+                    System.out.println("Latency not computed for " + link.getLink().getLinkId().getValue());
+                }
             }
         }
 
@@ -88,8 +96,9 @@ public class MonitorLinksTask extends TimerTask{
         //compute path's total delay
         if (latencies.size() > 0){
             totalDelay = qoSOperations.computeTotalDelay(latencies);
-        }*/
-
+        }
+        System.out.println("Total delay is " + totalDelay);
+        latencies.clear();
         //compute path's total packet loss
        // qoSOperations.QoEEstimation(totalpacketLoss, totalDelay);
 

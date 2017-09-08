@@ -41,9 +41,9 @@ public class PacketSender {
         this.packetProcessingService = packetProcessingService;
     }
 
-    public boolean sendPacket(long queue, String outputNodeConnector, String nodeId) {
+    public boolean sendPacket(long queue, String outputNodeConnector, String nodeId, String srcMac) {
 
-        MacAddress srcMacAddress = new MacAddress("00:00:00:00:00:09");
+        MacAddress srcMacAddress = new MacAddress(srcMac);
         String nodeConnectorId = outputNodeConnector.split(":")[2];
 
         NodeRef ref = createNodeRef(nodeId);
@@ -52,7 +52,7 @@ public class PacketSender {
         NodeConnectorRef nEgressConfRef = new NodeConnectorRef(createNodeConnRef(nodeId, nodeConnectorKey));
 
         byte[] lldpFrame = LLDPUtils.buildLldpFrame(new NodeId(nodeId),
-                new NodeConnectorId(outputNodeConnector), srcMacAddress, Long.parseLong(nodeConnectorId), null);
+                new NodeConnectorId(outputNodeConnector), srcMacAddress, Long.parseLong(nodeConnectorId));
 
         ActionBuilder actionBuilder = new ActionBuilder();
         ArrayList<Action> actions = new ArrayList<>();
@@ -94,8 +94,7 @@ public class PacketSender {
         try {
             if (future.get().isSuccessful()) {
                 sentTime = System.currentTimeMillis();
-                System.out.println("Sent time for " + outputNodeConnector + " is: " + sentTime);
-            //    System.out.println( future.get().isSuccessful());
+                System.out.println("Sent time is: " + sentTime);
                 return true;
             } else {
                 System.out.println("failed and error is " + future.get().getErrors().toString());

@@ -44,12 +44,12 @@ public class LatencyMonitor {
         packetSender = new PacketSender(packetProcessingService);
     }
 
-    public Long MeasureNextLink(Link link) {
+    public Long MeasureNextLink(Link link, String srcMac) {
 
         latency = -1L;
         String nodeConnectorId = link.getSource().getSourceTp().getValue();
         String nodeId = link.getSource().getSourceNode().getValue();
-        packetSender.sendPacket(0, nodeConnectorId, nodeId);
+        packetSender.sendPacket(0, nodeConnectorId, nodeId, srcMac);
         while(latency == -1) {
         }
         return latency;

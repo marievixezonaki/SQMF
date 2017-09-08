@@ -33,13 +33,15 @@ public class PacketProcessing implements PacketProcessingListener {
  //   private HashMap<String, Integer> outputPorts = new HashMap<>();
     public String srcNode;
     public String dstNode;
+    private String sourceMac;
 
-    public PacketProcessing(HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts, String srcNode, String dstNode) {
+    public PacketProcessing(HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts, String srcNode, String dstNode, String srcMac) {
         LOG.info("PacketProcessing loaded successfully");
      //   this.inputPorts = inputPorts;
      //   this.outputPorts = outputPorts;
         this.srcNode = srcNode;
         this.dstNode = dstNode;
+        this.sourceMac = srcMac;
         dstMacs = new LinkedList<>();
     }
 
@@ -85,9 +87,10 @@ public class PacketProcessing implements PacketProcessingListener {
         byte[] srcMacRaw = PacketParsingUtils.extractSrcMac(payload);
         String srcMac = PacketParsingUtils.rawMacToString(srcMacRaw);
 
-        if(srcMac.equals("00:00:00:00:00:09")) {
-            System.out.println("pacekt addrwess matched");
+        if(srcMac.equals(sourceMac)) {
+     //       System.out.println("pacekt addrwess matched");
             Long timeNow = System.currentTimeMillis();
+            System.out.println("Time now is: " + timeNow);
             Long latency = timeNow - PacketSender.sentTime;
             LatencyMonitor.latency = latency;
 

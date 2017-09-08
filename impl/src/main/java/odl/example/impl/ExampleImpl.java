@@ -44,10 +44,12 @@ public class ExampleImpl implements OdlexampleService {
     private static HashMap<String, Integer> inputPortsFailover = new HashMap<>();
     private static HashMap<String, Integer> outputPortsFailover = new HashMap<>();
     private static DataBroker db;
+    private String srcMacForDelayMeasuring = "00:00:00:00:00:09";
     public static String srcNode = null;
     public static String dstNode = null;
     private RpcProviderRegistry rpcProviderRegistry;
     private NotificationProviderService notificationService;
+    public static GraphPath<Integer, DomainLink> mainGraphWalk = null, failoverGraphWalk = null;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -76,26 +78,34 @@ public class ExampleImpl implements OdlexampleService {
             if (possiblePaths.size() > 1) {
                 GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
                 GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
+
+                mainGraphWalk = mainPath;
+                failoverGraphWalk = failoverPath;
+
                 Link lastLinkOfFailoverPath = failoverPath.getEdgeList().get(failoverPath.getEdgeList().size() - 1).getLink();
                 String lastPortOfFailoverLink = lastLinkOfFailoverPath.getDestination().getDestTp().getValue();
                 findPorts(mainPath, sourceNode, destNode);
+
                 //register packet processing listener
-                PacketProcessing packetProcessingListener = new PacketProcessing(inputPorts, outputPorts, srcNode, dstNode);
+                PacketProcessing packetProcessingListener = new PacketProcessing(inputPorts, outputPorts, srcNode, dstNode, srcMacForDelayMeasuring);
                 if (notificationService != null) {
                     notificationService.registerNotificationListener(packetProcessingListener);
-                    System.out.println("Registered packet processing listener");
                 }
                 SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
                 switchConfigurator.configureIngressAndEgressForMonitoring("openflow:1", "openflow:8", inputPorts, outputPorts, lastPortOfFailoverLink);
+
+                //then, add rules to all nodes of both main and failover path to forward packets with specific MAC to controller
+                switchConfigurator.configureNodesForDelayMonitoring(mainPath.getEdgeList(), srcMacForDelayMeasuring);
+//                switchConfigurator.configureNodesForDelayMonitoring(failoverPath.getEdgeList());
             }
         }
         else{
             return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
         }
 
-        //then, start monitoring links
+        //finally, start monitoring links
         Timer time = new Timer();
-        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2", rpcProviderRegistry);
+        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2", rpcProviderRegistry, srcMacForDelayMeasuring);
         time.schedule(monitorLinksTask, 0, 5000);
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
