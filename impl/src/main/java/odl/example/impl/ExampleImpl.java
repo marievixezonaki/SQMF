@@ -75,6 +75,9 @@ public class ExampleImpl implements OdlexampleService {
             List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
             if (possiblePaths.size() > 1) {
                 GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
+                GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
+                Link lastLinkOfFailoverPath = failoverPath.getEdgeList().get(failoverPath.getEdgeList().size() - 1).getLink();
+                String lastPortOfFailoverLink = lastLinkOfFailoverPath.getDestination().getDestTp().getValue();
                 findPorts(mainPath, sourceNode, destNode);
                 //register packet processing listener
                 PacketProcessing packetProcessingListener = new PacketProcessing(inputPorts, outputPorts, srcNode, dstNode);
@@ -82,11 +85,13 @@ public class ExampleImpl implements OdlexampleService {
                     notificationService.registerNotificationListener(packetProcessingListener);
                     System.out.println("Registered packet processing listener");
                 }
+                SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+                switchConfigurator.configureIngressAndEgressForMonitoring("openflow:1", "openflow:8", inputPorts, outputPorts, lastPortOfFailoverLink);
             }
         }
-
-        SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-        switchConfigurator.configureIngressAndEgressForMonitoring("openflow:1", "openflow:8", inputPorts, outputPorts);
+        else{
+            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+        }
 
         //then, start monitoring links
         Timer time = new Timer();

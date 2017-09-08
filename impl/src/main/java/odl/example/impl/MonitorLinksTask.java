@@ -47,6 +47,9 @@ public class MonitorLinksTask extends TimerTask{
    //     QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
    //     qoSOperations.getAllLinksWithQos();
 
+        //monitor packet loss
+   //     PacketLossMonitor packetLossMonitor = new PacketLossMonitor();
+  //      double totalPacketLoss = packetLossMonitor.monitorPacketLoss();
         Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
@@ -54,9 +57,17 @@ public class MonitorLinksTask extends TimerTask{
         ingressPackets = PacketProcessing.ingressUdpPackets;
         egressPackets = PacketProcessing.egressUdpPackets;
 
-        System.out.println("Ingress node has sent " + currentIngressPackets);
-        System.out.println("Egress node has received " + currentEgressPackets);
-        System.out.println("Packet loss is " + lostUdpPackets);
+        double packetLoss;
+        if (lostUdpPackets > 0){
+            System.out.println("Lost " + lostUdpPackets + " of total sent " + currentIngressPackets);
+            packetLoss = (double)lostUdpPackets/currentIngressPackets;
+        }
+        else{
+            packetLoss = 0;
+        }
+     //   System.out.println("Ingress node has sent " + PacketProcessing.ingressUdpPackets + " " + currentIngressPackets);
+     //   System.out.println("Egress node has received " + PacketProcessing.egressUdpPackets + " " + currentEgressPackets);
+        System.out.println("Packet loss is " + packetLoss);
 
         // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
     /*    if (rpcProviderRegistry != null) {
@@ -72,7 +83,7 @@ public class MonitorLinksTask extends TimerTask{
         }
 
         //TODO : check if there are latencies for all links
-        Long totalDelay = 0L, totalpacketLoss = 0L;
+        Long totalDelay = 0L;
 
         //compute path's total delay
         if (latencies.size() > 0){

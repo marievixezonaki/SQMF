@@ -187,7 +187,7 @@ public class QoSOperations {
      *
      * * @return  It returns the MOS value estimation.
      */
-    public double QoEEstimation(Long packetLoss, Long delay){
+    public double QoEEstimation(double packetLoss, Long delay){
         int h;
         if (delay - 177.3 > 0){
             h = 1;

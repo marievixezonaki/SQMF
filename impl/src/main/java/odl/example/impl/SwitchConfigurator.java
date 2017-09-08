@@ -559,19 +559,29 @@ public class SwitchConfigurator {
         return groupPath;
     }
 
-    public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
+    public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts, String lastPortOfFailoverLink){
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
 
-        //create flows and groups
-        Flow flowForIngress = createIngressAndEgressFlowForMonitoring(inputPorts.get(ingressSwitch), outputPorts.get(ingressSwitch));
-        InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(ingressSwitch, flowForIngress);
-        Flow flowForEgress = createIngressAndEgressFlowForMonitoring(inputPorts.get(egressSwitch), outputPorts.get(egressSwitch));
-        InstanceIdentifier<Flow> instanceIdentifierFailover = createInstanceIdentifierForFlow(egressSwitch, flowForEgress);
+        //create flows for ingress node
+        Flow flowForIngressMainPath = createIngressAndEgressFlowForMonitoring(inputPorts.get(ingressSwitch), outputPorts.get(ingressSwitch));
+        InstanceIdentifier<Flow> instanceIdentifierIngressMainPath = createInstanceIdentifierForFlow(ingressSwitch, flowForIngressMainPath);
+
+   //     Flow flowForIngressFailoverPath = createIngressAndEgressFlowForMonitoring();
+   //     InstanceIdentifier<Flow> instanceIdentifierIngressFailoverPath = createInstanceIdentifierForFlow(ingressSwitch, flowForIngressFailoverPath);
+
+        //create flows for egress node
+        Flow flowForEgressMainPath = createIngressAndEgressFlowForMonitoring(inputPorts.get(egressSwitch), outputPorts.get(egressSwitch));
+        InstanceIdentifier<Flow> instanceIdentifierEgressMainPath = createInstanceIdentifierForFlow(egressSwitch, flowForEgressMainPath);
+
+    //    Flow flowForEgressFailoverPath = createIngressAndEgressFlowForMonitoring(Integer.parseInt(lastPortOfFailoverLink.split(":")[2]), outputPorts.get(egressSwitch));
+    //    InstanceIdentifier<Flow> instanceIdentifierEgressFailoverPath = createInstanceIdentifierForFlow(egressSwitch, flowForEgressFailoverPath);
 
         //put flows into transaction
-        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flowForIngress, true);
-        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierFailover, flowForEgress, true);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngressMainPath, flowForIngressMainPath, true);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierEgressMainPath, flowForEgressMainPath, true);
+     //   transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngressFailoverPath, flowForIngressFailoverPath, true);
+     //   transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierEgressFailoverPath, flowForEgressFailoverPath, true);
 
         transaction.submit();
     }
