@@ -125,10 +125,10 @@ public final class LLDPUtils {
         return StringUtils.leftPad(dataPathId.toString(16), 16, "0");
     }
 
- /*   static byte[] buildLldpFrame(final NodeId nodeId,
+    static byte[] buildLldpFrame(final NodeId nodeId,
                                  final NodeConnectorId nodeConnectorId,
                                  final MacAddress srcMacAddress,
                                  final Long outputPortNo) {
         return buildLldpFrame(nodeId, nodeConnectorId, srcMacAddress, outputPortNo, null);
-    }*/
+    }
 }

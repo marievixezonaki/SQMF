@@ -40,15 +40,12 @@ public class QoSOperations {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
     private DataBroker db;
-    private String pathInputPort, pathOutputPort;
     private static HashMap<String, BigInteger> packetsTransmittedList = new HashMap<>();
     private static HashMap<String, BigInteger> packetsReceivedList = new HashMap<>();
     private List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = null;
 
-    public QoSOperations(DataBroker dataBroker, String pathInputPort, String pathOutputPort){
+    public QoSOperations(DataBroker dataBroker){
         this.db = dataBroker;
-        this.pathInputPort = pathInputPort;
-        this.pathOutputPort = pathOutputPort;
     }
 
     /**
@@ -56,7 +53,7 @@ public class QoSOperations {
      *
      * * @return  It returns a list of links with their delay and packet loss.
      */
-    public List<LinkWithQoS> getAllLinksWithQos() {
+  /*  public List<LinkWithQoS> getAllLinksWithQos() {
 
         try {
             nodeList = getNodes(db);
@@ -115,7 +112,7 @@ public class QoSOperations {
             }
         }
         return null;
-    }
+    }*/
 
     /**
      * The method which finds all links of the topology from the datastore.

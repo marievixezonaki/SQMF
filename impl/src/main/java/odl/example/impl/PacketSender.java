@@ -52,7 +52,7 @@ public class PacketSender {
         NodeConnectorRef nEgressConfRef = new NodeConnectorRef(createNodeConnRef(nodeId, nodeConnectorKey));
 
         byte[] lldpFrame = LLDPUtils.buildLldpFrame(new NodeId(nodeId),
-                new NodeConnectorId(outputNodeConnector), srcMacAddress, Long.parseLong(nodeConnectorId), null);
+                new NodeConnectorId(outputNodeConnector), srcMacAddress, Long.parseLong(nodeConnectorId) );
 
         ActionBuilder actionBuilder = new ActionBuilder();
         ArrayList<Action> actions = new ArrayList<>();

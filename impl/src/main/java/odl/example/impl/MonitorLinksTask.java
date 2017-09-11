@@ -44,13 +44,13 @@ public class MonitorLinksTask extends TimerTask{
     public void run() {
 
         //monitor packet loss and delay
-   //     QoSOperations qoSOperations = new QoSOperations(db, "openflow:1:2", "openflow:8:2");
+        QoSOperations qoSOperations = new QoSOperations(db);
    //     qoSOperations.getAllLinksWithQos();
 
         //monitor packet loss
    //     PacketLossMonitor packetLossMonitor = new PacketLossMonitor();
   //      double totalPacketLoss = packetLossMonitor.monitorPacketLoss();
-        Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
+ /*       Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
 
@@ -67,10 +67,10 @@ public class MonitorLinksTask extends TimerTask{
         }
      //   System.out.println("Ingress node has sent " + PacketProcessing.ingressUdpPackets + " " + currentIngressPackets);
      //   System.out.println("Egress node has received " + PacketProcessing.egressUdpPackets + " " + currentEgressPackets);
-        System.out.println("Packet loss is " + packetLoss);
+        System.out.println("Packet loss is " + packetLoss);*/
 
         // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
-    /*    if (rpcProviderRegistry != null) {
+        if (rpcProviderRegistry != null) {
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
             LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
@@ -88,7 +88,8 @@ public class MonitorLinksTask extends TimerTask{
         //compute path's total delay
         if (latencies.size() > 0){
             totalDelay = qoSOperations.computeTotalDelay(latencies);
-        }*/
+        }
+        latencies.clear();
 
         //compute path's total packet loss
        // qoSOperations.QoEEstimation(totalpacketLoss, totalDelay);
