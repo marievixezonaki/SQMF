@@ -7,19 +7,11 @@
  */
 package odl.example.impl;
 
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.yang.types.rev130715.MacAddress;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.Match;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingListener;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketReceived;
-import org.opendaylight.yangtools.concepts.Registration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -29,17 +21,15 @@ public class PacketProcessing implements PacketProcessingListener {
     private List<String> dstMacs;
     public static Integer ingressUdpPackets = 0;
     public static Integer egressUdpPackets = 0;
-  //  private HashMap<String, Integer> inputPorts = new HashMap<>();
- //   private HashMap<String, Integer> outputPorts = new HashMap<>();
     public String srcNode;
     public String dstNode;
+    private String sourceMac;
 
-    public PacketProcessing(HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts, String srcNode, String dstNode) {
+    public PacketProcessing(String srcNode, String dstNode, String srcMac) {
         LOG.info("PacketProcessing loaded successfully");
-     //   this.inputPorts = inputPorts;
-     //   this.outputPorts = outputPorts;
         this.srcNode = srcNode;
         this.dstNode = dstNode;
+        this.sourceMac = srcMac;
         dstMacs = new LinkedList<>();
     }
 
@@ -47,10 +37,8 @@ public class PacketProcessing implements PacketProcessingListener {
     public void onPacketReceived(PacketReceived packetReceived) {
 
         byte[] payload = packetReceived.getPayload();
-        String protocol;
-        byte p = PacketParsingUtils.extractIPprotocol(payload);
-        if (p == 0x11) {
-            protocol = "UDP";
+        byte protocol = PacketParsingUtils.extractIPprotocol(payload);
+        if (protocol == 0x11) {
             Match match = packetReceived.getMatch();
             String[] matchParts = match.getInPort().getValue().split(":");
             String switchWhichReceivedPacket = matchParts[0].concat(":").concat(matchParts[1]);
@@ -62,56 +50,19 @@ public class PacketProcessing implements PacketProcessingListener {
             }
         }
 
-     //   System.out.println("Packet received");
-
-/*
-        byte[] srcMacRaw = PacketParsingUtils.extractSrcMac(payload);
-        String srcMac = PacketParsingUtils.rawMacToString(srcMacRaw);
-        LOG.info(srcMac);
-        byte[] dstMacRaw = PacketParsingUtils.extractDstMac(payload);
-        String dstMac = PacketParsingUtils.rawMacToString(dstMacRaw);
-        LOG.info(dstMac);
-
-        LOG.info("\n\n\n\n --------------------------------------");
-
-        byte[] srcIpRaw = PacketParsingUtils.extractSrcIP(payload);
-        String srcIp = PacketParsingUtils.rawIpToString(srcIpRaw);
-        LOG.info("Source IP: " + srcIp);
-        byte[] dstIpRaw = PacketParsingUtils.extractDstIP(payload);
-        String dstIp = PacketParsingUtils.rawIpToString(dstIpRaw);
-*/
-//        LOG.info("Destination IP: " + dstIp);
-
         byte[] srcMacRaw = PacketParsingUtils.extractSrcMac(payload);
         String srcMac = PacketParsingUtils.rawMacToString(srcMacRaw);
 
-        if(srcMac.equals("00:00:00:00:00:09")) {
-            System.out.println("pacekt addrwess matched");
+        if(srcMac.equals(sourceMac)) {
             Long timeNow = System.currentTimeMillis();
-            Long latency = timeNow - PacketSender.sentTime;
+            Long sentTime = PacketSender.sentTimes.get(packetReceived.getMatch().getInPort().getValue());
+      //      System.out.println("Packet received from " + packetReceived.getMatch().getInPort().getValue());
+      //      System.out.println("Time now is: " + timeNow);
+     //       System.out.println("Sent time is : " + sentTime);
+            Long latency = timeNow - sentTime;
             LatencyMonitor.latency = latency;
-
-          /*  System.out.println("Got the packet    " + System.currentTimeMillis());
-            System.out.println("latency is " + (System.currentTimeMillis() - PacketSender.sentTime ) );
-*/
+            MonitorLinksTask.packetReceivedFromController = true;
         }
-
-        byte[] dstMacRaw = PacketParsingUtils.extractDstMac(payload);
-        String dstMac = PacketParsingUtils.rawMacToString(dstMacRaw);
-/*        String protocol;
-        byte p = PacketParsingUtils.extractIPprotocol(payload);
-        if (p == 0x11)
-            protocol = "UDP";
-        else
-            protocol = "TCP";
-*/
-   //     int port = PacketParsingUtils.extractDestPort(payload);
-
-  /*      if (isDestination(dstMac)) {
-            forwardPacket(srcMac, dstMac, srcIp, dstIp);
-        }
-*/
-
     }
 
     public void addDestMac(String address) {

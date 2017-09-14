@@ -10,14 +10,10 @@ package odl.example.impl;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.TransmitPacketInput;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
-import org.opendaylight.yangtools.yang.common.RpcResult;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TimerTask;
-import java.util.concurrent.Future;
 
 /**
  * The class implementing a task which monitors the topology's links.
@@ -32,12 +28,17 @@ public class MonitorLinksTask extends TimerTask{
     private RpcProviderRegistry rpcProviderRegistry;
     private List<Long> latencies = new ArrayList<>();
     private Integer ingressPackets = 0, egressPackets = 0;
+    String sourceMac;
+    volatile static boolean packetReceivedFromController = false;
 
-    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry){
+    private static HashMap<String, String> nextNodeConnectors = new HashMap();
+
+    public MonitorLinksTask(DataBroker db, String pathInputPort, String pathOutputPort, RpcProviderRegistry rpcProviderRegistry, String srcMac){
         this.db = db;
         this.pathInputPort = pathInputPort;
         this.pathOutputPort = pathOutputPort;
         this.rpcProviderRegistry = rpcProviderRegistry;
+        this.sourceMac = srcMac;
     }
 
     @Override
@@ -50,7 +51,7 @@ public class MonitorLinksTask extends TimerTask{
         //monitor packet loss
    //     PacketLossMonitor packetLossMonitor = new PacketLossMonitor();
   //      double totalPacketLoss = packetLossMonitor.monitorPacketLoss();
- /*       Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
+   /*     Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
 
@@ -69,16 +70,82 @@ public class MonitorLinksTask extends TimerTask{
      //   System.out.println("Egress node has received " + PacketProcessing.egressUdpPackets + " " + currentEgressPackets);
         System.out.println("Packet loss is " + packetLoss);*/
 
-        // rpcProviderRegistry.getRpcService(PacketProcessingService.class);
+        double packetLoss = monitorPacketLoss();
+        //monitor delay
+ /*       if (rpcProviderRegistry != null) {
+            packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
+
+            LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
+            List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
+            //find next node connector where each packet should arrive at
+            findNextNodeConnector(linkList);
+            for (DomainLink link : linkList) {
+                if (!link.getLink().getLinkId().getValue().contains("host")) {
+                    Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));
+                    System.out.println("Latency for " + link.getLink().getSource().getSourceNode().getValue() + " --> " + link.getLink().getDestination().getDestNode().getValue()  + " is " + latency);
+                    while (packetReceivedFromController == false){
+
+                    }
+                    latencies.add(latency);
+                }
+                else{
+                    System.out.println("Latency not computed for " + link.getLink().getLinkId().getValue());
+                }
+            }
+        }
+
+        //TODO : check if there are latencies for all links
+        Long totalDelay = 0L;
+
+        //compute path's total delay
+        if (latencies.size() > 0){
+            totalDelay = qoSOperations.computeTotalDelay(latencies);
+        }
+        System.out.println("Total delay is " + totalDelay);
+        latencies.clear();*/
+        Long delay = monitorDelay();
+        System.out.println("Total delay is " + delay);
+        System.out.println("Total loss is " + packetLoss);
+
+        //compute path's QoE
+        double pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
+        System.out.println("MOS is " + pathMOS);
+
+        System.out.println("-----------------------------------------------------------------------------------------------------");
+    }
+
+    private void findNextNodeConnector(List<DomainLink> linkList){
+
+        int i = 0;
+        for (DomainLink domainLink : linkList){
+            if (i <= (linkList.size()-1)){
+                nextNodeConnectors.put(domainLink.getLink().getSource().getSourceNode().getValue() ,domainLink.getLink().getDestination().getDestTp().getValue());
+            }
+        }
+    }
+
+    private Long monitorDelay(){
+        QoSOperations qoSOperations = new QoSOperations(db);
+
         if (rpcProviderRegistry != null) {
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
             LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
-            List<Link> linkList = latencyMonitor.getAllLinks();
-            for (Link link : linkList) {
-                Long latency = latencyMonitor.MeasureNextLink(link);
-                latencies.add(latency);
-                System.out.println("Latency for " + link.getSource().getSourceNode().getValue() + "-->" + link.getDestination().getDestNode().getValue() + " is " + latency);
+            List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
+            //find next node connector where each packet should arrive at
+            findNextNodeConnector(linkList);
+            for (DomainLink link : linkList) {
+                if (!link.getLink().getLinkId().getValue().contains("host")) {
+                    Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));
+                    System.out.println("Latency for " + link.getLink().getSource().getSourceNode().getValue() + " --> " + link.getLink().getDestination().getDestNode().getValue()  + " is " + latency);
+                    while (packetReceivedFromController == false){
+
+                    }
+                    latencies.add(latency);
+                }
+                else{
+                    System.out.println("Latency not computed for " + link.getLink().getLinkId().getValue());
+                }
             }
         }
 
@@ -90,12 +157,26 @@ public class MonitorLinksTask extends TimerTask{
             totalDelay = qoSOperations.computeTotalDelay(latencies);
         }
         latencies.clear();
-
-        //compute path's total packet loss
-       // qoSOperations.QoEEstimation(totalpacketLoss, totalDelay);
-
-        System.out.println("-----------------------------------------------------------------------------------------------------");
+        return totalDelay;
     }
 
+    private double monitorPacketLoss(){
+        Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
+        Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
+        Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
+
+        ingressPackets = PacketProcessing.ingressUdpPackets;
+        egressPackets = PacketProcessing.egressUdpPackets;
+
+        double packetLoss;
+        if (lostUdpPackets > 0){
+     //       System.out.println("Lost " + lostUdpPackets + " of total sent " + currentIngressPackets);
+            packetLoss = (double)lostUdpPackets/currentIngressPackets;
+        }
+        else{
+            packetLoss = 0;
+        }
+        return packetLoss;
+    }
 }
 

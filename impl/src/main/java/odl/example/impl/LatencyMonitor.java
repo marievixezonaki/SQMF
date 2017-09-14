@@ -7,34 +7,16 @@
  */
 package odl.example.impl;
 
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
 
 public class LatencyMonitor {
 
     private static DataBroker db;
 
-    public static Long latency = -1L;
+    public volatile static Long latency = -1L;
 
-    private static HashMap<Link, Long> latencies = new HashMap<>();
-    private static  HashMap<Link, Long> jitters = new HashMap<>();
-    private static ArrayList<Link> links = new ArrayList<>();
     private static PacketProcessingService packetProcessingService;
     private static PacketSender packetSender;
 
@@ -44,36 +26,15 @@ public class LatencyMonitor {
         packetSender = new PacketSender(packetProcessingService);
     }
 
-    public Long MeasureNextLink(Link link) {
-
+    public Long MeasureNextLink(Link link, String srcMac, String nextNodeConnector) {
+        MonitorLinksTask.packetReceivedFromController = false;
         latency = -1L;
         String nodeConnectorId = link.getSource().getSourceTp().getValue();
         String nodeId = link.getSource().getSourceNode().getValue();
-        packetSender.sendPacket(0, nodeConnectorId, nodeId);
+        packetSender.sendPacket(0, nodeConnectorId, nodeId, srcMac, nextNodeConnector);
         while(latency == -1) {
         }
         return latency;
     }
 
-    public List<Link> getAllLinks() {
-        List<Link> linkList = new ArrayList<>();
-
-        try {
-            TopologyId topoId = new TopologyId("flow:1");
-            InstanceIdentifier<Topology> nodesIid = InstanceIdentifier.builder(NetworkTopology.class).child(Topology.class, new TopologyKey(topoId)).toInstance();
-            ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
-            CheckedFuture<Optional<Topology>, ReadFailedException> nodesFuture = nodesTransaction
-                    .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
-            Optional<Topology> nodesOptional = nodesFuture.checkedGet();
-
-            if (nodesOptional != null && nodesOptional.isPresent())
-                linkList = nodesOptional.get().getLink();
-
-            return linkList;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return linkList;
-        }
-
-    }
 }

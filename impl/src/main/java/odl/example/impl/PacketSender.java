@@ -28,6 +28,7 @@ import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.Future;
 
 public class PacketSender {
@@ -35,15 +36,16 @@ public class PacketSender {
     private PacketProcessingService packetProcessingService;
     private Logger LOG = LoggerFactory.getLogger(PacketSender.class);
 
-    public static Long sentTime = 0L;
+    public volatile static Long sentTime = 0L;
+    public static HashMap<String, Long> sentTimes = new HashMap();
 
     public PacketSender(PacketProcessingService packetProcessingService){
         this.packetProcessingService = packetProcessingService;
     }
 
-    public boolean sendPacket(long queue, String outputNodeConnector, String nodeId) {
+    public boolean sendPacket(long queue, String outputNodeConnector, String nodeId, String srcMac, String nextNodeConnector) {
 
-        MacAddress srcMacAddress = new MacAddress("00:00:00:00:00:09");
+        MacAddress srcMacAddress = new MacAddress(srcMac);
         String nodeConnectorId = outputNodeConnector.split(":")[2];
 
         NodeRef ref = createNodeRef(nodeId);
@@ -52,7 +54,7 @@ public class PacketSender {
         NodeConnectorRef nEgressConfRef = new NodeConnectorRef(createNodeConnRef(nodeId, nodeConnectorKey));
 
         byte[] lldpFrame = LLDPUtils.buildLldpFrame(new NodeId(nodeId),
-                new NodeConnectorId(outputNodeConnector), srcMacAddress, Long.parseLong(nodeConnectorId) );
+                new NodeConnectorId(outputNodeConnector), srcMacAddress, Long.parseLong(nodeConnectorId));
 
         ActionBuilder actionBuilder = new ActionBuilder();
         ArrayList<Action> actions = new ArrayList<>();
@@ -89,16 +91,18 @@ public class PacketSender {
                 .setPayload(lldpFrame)
                 .setAction(actions)
                 .build();
+     //   sentTime = System.currentTimeMillis();
+        sentTimes.put(nextNodeConnector, System.currentTimeMillis());
 
         Future<RpcResult<Void>> future = packetProcessingService.transmitPacket(packet);
         try {
             if (future.get().isSuccessful()) {
-                sentTime = System.currentTimeMillis();
-                System.out.println("Sent time for " + outputNodeConnector + " is: " + sentTime);
-            //    System.out.println( future.get().isSuccessful());
+      //          sentTime = System.currentTimeMillis();
+         //       System.out.println("Packet sent from " + outputNodeConnector);
+          //      System.out.println("Sent time is: " + sentTime);
                 return true;
             } else {
-                System.out.println("failed and error is " + future.get().getErrors().toString());
+         //       System.out.println("Failure to send packet : " + future.get().getErrors().toString());
                 return false;
             }
 
