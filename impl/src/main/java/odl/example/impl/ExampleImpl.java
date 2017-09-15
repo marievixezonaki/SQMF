@@ -93,9 +93,9 @@ public class ExampleImpl implements OdlexampleService {
                 mainGraphWalk = mainPath;
                 failoverGraphWalk = failoverPath;
 
-                Link lastLinkOfFailoverPath = failoverPath.getEdgeList().get(failoverPath.getEdgeList().size() - 1).getLink();
+                Link lastLinkOfFailoverPath = failoverGraphWalk.getEdgeList().get(failoverGraphWalk.getEdgeList().size() - 1).getLink();
                 String lastPortOfFailoverLink = lastLinkOfFailoverPath.getDestination().getDestTp().getValue();
-                findPorts(mainPath, sourceNode, destNode);
+                findPorts(mainGraphWalk, sourceNode, destNode);
 
                 //register packet processing listener
                 PacketProcessing packetProcessingListener = new PacketProcessing(srcNode, dstNode, srcMacForDelayMeasuring);
@@ -103,7 +103,7 @@ public class ExampleImpl implements OdlexampleService {
                     notificationService.registerNotificationListener(packetProcessingListener);
                 }
                 SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-                switchConfigurator.configureIngressAndEgressForMonitoring("openflow:1", "openflow:8", inputPorts, outputPorts, lastPortOfFailoverLink);
+                switchConfigurator.configureIngressAndEgressForMonitoring(srcNode, dstNode, inputPorts, outputPorts);
 
                 //then, add rules to all nodes of both main and failover path to forward packets with specific MAC to controller
                 switchConfigurator.configureNodesForDelayMonitoring(mainGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
@@ -119,21 +119,32 @@ public class ExampleImpl implements OdlexampleService {
         monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring);
         timer.schedule(monitorLinksTask, 0, 5000);*/
 
+        /// TEST ///
+        changeMonitoring();
+
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 
     public static void changeMonitoring(){
-        System.out.println("Cancelling task and timer ...");
-        monitorLinksTask.cancel();
-        timer.cancel();
+    //    System.out.println("Cancelling task and timer ...");
+    //    monitorLinksTask.cancel();
+    //    timer.cancel();
 
         System.out.println("Starting new task and timer for the new main link ...");
-        GraphPath<Integer, DomainLink> temp = ExampleImpl.mainGraphWalk;
-        ExampleImpl.mainGraphWalk = ExampleImpl.failoverGraphWalk;
-        ExampleImpl.failoverGraphWalk = temp;
+        GraphPath<Integer, DomainLink> temp = mainGraphWalk;
+        mainGraphWalk = failoverGraphWalk;
+        failoverGraphWalk = temp;
 
-        SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-        switchConfigurator.configureNodesForDelayMonitoring(mainGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
+        if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+            Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+            findPorts(mainGraphWalk, domainNodes.get(srcNode), domainNodes.get(dstNode));
+            SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+            switchConfigurator.configureIngressAndEgressForMonitoring(mainGraphWalk.getEdgeList().get(0).getLink().getSource().getSourceNode().getValue(), mainGraphWalk.getEdgeList().get(0).getLink().getDestination().getDestNode().getValue(), inputPorts, outputPorts);
+            //     switchConfigurator.configureNodesForDelayMonitoring(mainGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
+            //configure ingress to forward traffic to new main path
+            // switchConfigurator.configureNewIngress(mainGraphWalk.getEdgeList().get(0).getLink().getSource().getSourceNode().getValue());
+        }
+
     }
 
     @Override

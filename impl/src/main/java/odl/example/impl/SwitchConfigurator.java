@@ -557,7 +557,7 @@ public class SwitchConfigurator {
         return groupPath;
     }
 
-    public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts, String lastPortOfFailoverLink){
+    public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
 
         WriteTransaction transaction = db.newWriteOnlyTransaction();
 
@@ -728,7 +728,85 @@ public class SwitchConfigurator {
                 .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
                 .setFlags(new FlowModFlags(false, false, false, false, false));
 
-        return flowBuilder.build();    }
+        return flowBuilder.build();
+    }
+
+    public void configureNewIngress(String switchToConfigure, Integer outPort){
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+
+        Flow flow = createFlowForNewIngress(outPort);
+        InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flow, true);
+
+        transaction.submit();
+    }
+
+    public Flow createFlowForNewIngress(Integer outPort){
+
+        FlowBuilder flowBuilder = new FlowBuilder()
+                .setTableId((short) 0)
+                .setFlowName("flow" + flowId)
+                .setId(new FlowId(flowId.toString()));
+        flowId++;
+
+        Match match = new MatchBuilder()
+                .setEthernetMatch(new EthernetMatchBuilder()
+                        .setEthernetSource(new EthernetSourceBuilder()
+                                .build())
+                        .build())
+                .build();
+
+        ActionBuilder actionBuilder = new ActionBuilder();
+        List<Action> actions = new ArrayList<Action>();
+
+        //output to controller
+        Action outputToControllerAction = actionBuilder
+                .setOrder(0).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setMaxLength(65535)
+                                .setOutputNodeConnector(new Uri(OutputPortValues.CONTROLLER.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputToControllerAction);
+
+        Action outputNodeConnectorAction = actionBuilder
+                .setOrder(1).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setOutputNodeConnector(new Uri(outPort.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputNodeConnectorAction);
+
+        //ApplyActions
+        ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();
+        List<Instruction> instructions = new ArrayList<>();
+
+        //Instruction for Actions
+        Instruction applyActionsInstruction = new InstructionBuilder()
+                .setOrder(0).setInstruction(new ApplyActionsCaseBuilder()
+                        .setApplyActions(applyActions)
+                        .build())
+                .build();
+
+        instructions.add(applyActionsInstruction);
+
+        //Build all the instructions together, based on the Instructions list
+        Instructions allInstructions = new InstructionsBuilder()
+                .setInstruction(instructions)
+                .build();
+
+        flowBuilder
+                .setMatch(match)
+                .setBufferId(OFConstants.OFP_NO_BUFFER)
+                .setInstructions(allInstructions)
+                .setPriority(1000)
+                .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
+                .setFlags(new FlowModFlags(false, false, false, false, false));
+
+        return flowBuilder.build();
+    }
 }
 
 
