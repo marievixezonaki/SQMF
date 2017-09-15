@@ -663,8 +663,6 @@ public class SwitchConfigurator {
         WriteTransaction transaction = db.newWriteOnlyTransaction();
 
         for (DomainLink link : links){
-         //   System.out.println("Link " + link.getLink().getSource().getSourceNode().getValue() + " --> " + link.getLink().getDestination().getDestNode().getValue());
-
             String switchToConfigure = link.getLink().getDestination().getDestNode().getValue();
             Flow flow = createFlowForDelayMonitoring(srcMac);
             InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(switchToConfigure, flow);

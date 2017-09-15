@@ -19,6 +19,20 @@ module odlexample {
     }
 
     rpc startMonitoringLinks{
+        input{
+            leaf srcNode {
+                type string;
+            }
+            leaf dstNode {
+                type string;
+            }
+            leaf QoEThreshold{
+                type string;
+            }
+        }
     }
 
+    rpc stopMonitoringLinks{
+
+    }
 }

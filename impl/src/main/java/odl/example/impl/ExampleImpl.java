@@ -41,13 +41,16 @@ public class ExampleImpl implements OdlexampleService {
     private static HashMap<String, Integer> inputPortsFailover = new HashMap<>();
     private static HashMap<String, Integer> outputPortsFailover = new HashMap<>();
     private static DataBroker db;
-    private String srcMacForDelayMeasuring = "00:00:00:00:00:09";
+    private static String srcMacForDelayMeasuring = "00:00:00:00:00:09";
     public static String srcNode = null;
     public static String dstNode = null;
     private RpcProviderRegistry rpcProviderRegistry;
     private NotificationProviderService notificationService;
     public static GraphPath<Integer, DomainLink> mainGraphWalk = null, failoverGraphWalk = null;
     public static int mainGraphWalkSize;
+    public static double QoEThreshold;
+    private static Timer timer;
+    private static MonitorLinksTask monitorLinksTask;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -60,11 +63,20 @@ public class ExampleImpl implements OdlexampleService {
      * The method which starts monitoring the packet loss and delay of links, when the user asks it.
      */
     @Override
-    public Future<RpcResult<Void>> startMonitoringLinks() {
+    public Future<RpcResult<Void>> startMonitoringLinks(StartMonitoringLinksInput input) {
 
-        //TODO : change way of obtaining srcNode and dstNode
-        srcNode = "openflow:1";
-        dstNode = "openflow:8";
+        if (input != null){
+            if (input.getSrcNode() != null && input.getDstNode() != null && input.getQoEThreshold() != null){
+                srcNode = input.getSrcNode();
+                dstNode = input.getDstNode();
+                Float QoE = Float.parseFloat(input.getQoEThreshold());
+                QoEThreshold = QoE.doubleValue();
+            }
+        }
+        else{
+            System.out.println("A field of the input is empty, try again.");
+            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+        }
 
         //first, add rules to ingress and egress nodes to forward their packets to controller
         if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
@@ -77,8 +89,8 @@ public class ExampleImpl implements OdlexampleService {
                 GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
                 GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
 
+                //determine main and failover path
                 mainGraphWalk = mainPath;
-                mainGraphWalkSize = mainPath.getEdgeList().size();
                 failoverGraphWalk = failoverPath;
 
                 Link lastLinkOfFailoverPath = failoverPath.getEdgeList().get(failoverPath.getEdgeList().size() - 1).getLink();
@@ -94,8 +106,8 @@ public class ExampleImpl implements OdlexampleService {
                 switchConfigurator.configureIngressAndEgressForMonitoring("openflow:1", "openflow:8", inputPorts, outputPorts, lastPortOfFailoverLink);
 
                 //then, add rules to all nodes of both main and failover path to forward packets with specific MAC to controller
-                switchConfigurator.configureNodesForDelayMonitoring(mainPath.getEdgeList(), srcMacForDelayMeasuring);
-//                switchConfigurator.configureNodesForDelayMonitoring(failoverPath.getEdgeList());
+                switchConfigurator.configureNodesForDelayMonitoring(mainGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
+                switchConfigurator.configureNodesForDelayMonitoring(failoverGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
             }
         }
         else{
@@ -103,10 +115,32 @@ public class ExampleImpl implements OdlexampleService {
         }
 
         //finally, start monitoring links
-        Timer time = new Timer();
-        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, "openflow:1:2", "openflow:8:2", rpcProviderRegistry, srcMacForDelayMeasuring);
-        time.schedule(monitorLinksTask, 0, 5000);
+   /*     timer = new Timer();
+        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring);
+        timer.schedule(monitorLinksTask, 0, 5000);*/
 
+        return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+    }
+
+    public static void changeMonitoring(){
+        System.out.println("Cancelling task and timer ...");
+        monitorLinksTask.cancel();
+        timer.cancel();
+
+        System.out.println("Starting new task and timer for the new main link ...");
+        GraphPath<Integer, DomainLink> temp = ExampleImpl.mainGraphWalk;
+        ExampleImpl.mainGraphWalk = ExampleImpl.failoverGraphWalk;
+        ExampleImpl.failoverGraphWalk = temp;
+
+        SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+        switchConfigurator.configureNodesForDelayMonitoring(mainGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
+    }
+
+    @Override
+    public Future<RpcResult<Void>> stopMonitoringLinks() {
+        System.out.println("Stopping the monitoring of links.");
+        monitorLinksTask.cancel();
+        timer.cancel();
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 

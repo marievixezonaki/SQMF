@@ -9,6 +9,7 @@ package odl.example.impl;
 
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.CheckedFuture;
+import org.jgrapht.GraphPath;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
@@ -126,7 +127,11 @@ public class QoSOperations {
         else {
             h = 0;
         }
+        System.out.println("h is " + h);
+
         double R = 94.2 - 0.024*delay - 0.11*h*(delay-177.3) - 11 - 40*Math.log(1+10*packetLoss);
+        System.out.println("R is " + R);
+
         double MOS;
         if (R < 0){
             MOS = 0;
@@ -134,6 +139,9 @@ public class QoSOperations {
         else{
             MOS = 1 + 0.035*R + R*(R-60)*(100-R)/1000000;
         }
+        System.out.println("h is " + h);
+
         return MOS;
     }
+
 }
