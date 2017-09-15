@@ -108,9 +108,13 @@ public class MonitorLinksTask extends TimerTask{
         System.out.println("Total loss is " + packetLoss);
 
         //compute path's QoE
-        double pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
-        System.out.println("MOS is " + pathMOS);
-
+        if (delay != null) {
+            double pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
+            System.out.println("MOS is " + pathMOS);
+        }
+        else{
+            System.out.println("Link failure, no MOS computed.");
+        }
         System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
@@ -134,7 +138,12 @@ public class MonitorLinksTask extends TimerTask{
             List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
             //find next node connector where each packet should arrive at
             findNextNodeConnector(linkList);
-            for (DomainLink link : linkList) {
+            for (DomainLink link : ExampleImpl.mainGraphWalk.getEdgeList()) {
+                System.out.println("Will compute delay for " + link.getLink().getLinkId().getValue());
+                if (!NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())){
+                    System.out.println("Link " + link.getLink().getLinkId().getValue() + " is down : Have to change path.");
+                    return null;
+                }
                 if (!link.getLink().getLinkId().getValue().contains("host")) {
                     Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));
                     System.out.println("Latency for " + link.getLink().getSource().getSourceNode().getValue() + " --> " + link.getLink().getDestination().getDestNode().getValue()  + " is " + latency);
@@ -153,8 +162,11 @@ public class MonitorLinksTask extends TimerTask{
         Long totalDelay = 0L;
 
         //compute path's total delay
-        if (latencies.size() > 0){
+        if (latencies.size() > 0 && latencies.size() == ExampleImpl.mainGraphWalkSize){
             totalDelay = qoSOperations.computeTotalDelay(latencies);
+        }
+        else{
+            System.out.println("A link is down");
         }
         latencies.clear();
         return totalDelay;

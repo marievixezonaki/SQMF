@@ -47,6 +47,7 @@ public class ExampleImpl implements OdlexampleService {
     private RpcProviderRegistry rpcProviderRegistry;
     private NotificationProviderService notificationService;
     public static GraphPath<Integer, DomainLink> mainGraphWalk = null, failoverGraphWalk = null;
+    public static int mainGraphWalkSize;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -77,6 +78,7 @@ public class ExampleImpl implements OdlexampleService {
                 GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
 
                 mainGraphWalk = mainPath;
+                mainGraphWalkSize = mainPath.getEdgeList().size();
                 failoverGraphWalk = failoverPath;
 
                 Link lastLinkOfFailoverPath = failoverPath.getEdgeList().get(failoverPath.getEdgeList().size() - 1).getLink();
