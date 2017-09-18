@@ -7,6 +7,7 @@
  */
 package odl.example.impl;
 
+import org.jgrapht.GraphPath;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
@@ -29,9 +30,8 @@ public class MonitorLinksTask extends TimerTask{
     private Integer ingressPackets = 0, egressPackets = 0;
     String sourceMac;
     volatile static boolean packetReceivedFromController = false;
-    static boolean linkFailure = false;
-
     private static HashMap<String, String> nextNodeConnectors = new HashMap();
+    public static boolean isFailover = false;
 
     public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac){
         this.db = db;
@@ -44,40 +44,76 @@ public class MonitorLinksTask extends TimerTask{
 
         //monitor packet loss and delay
         QoSOperations qoSOperations = new QoSOperations(db);
+        Long delay = monitorDelay(ExampleImpl.mainGraphWalk);
+        Long delayFailover = monitorDelay(ExampleImpl.failoverGraphWalk);
         double packetLoss = monitorPacketLoss();
-        Long delay = monitorDelay();
 
         System.out.println("Total delay is " + delay + " ms");
+        System.out.println("Total delay for failover is " + delayFailover + " ms");
         System.out.println("Total loss is " + packetLoss + "%");
 
         //compute path's QoE
-        double pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
+        double pathMOS;
+        if (!isFailover) {
+            pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
+        }
+        else{
+            pathMOS = qoSOperations.QoEEstimation(delayFailover, packetLoss);
+        }
+
         System.out.println("MOS is " + pathMOS);
         if (pathMOS < ExampleImpl.QoEThreshold) {
-            System.out.println("MOS is too low, QoE requirements not covered --> Changing path.");
+            System.out.println("MOS is lower than the threshold.");
             //cancel previous timer task and monitor the new main path
-            ExampleImpl.changeMonitoring();
-        }
-        else if (linkFailure){
-            System.out.println("Changing path due to link failure.");
-            //cancel previous timer task and monitor the new main path
-            ExampleImpl.changeMonitoring();
+            if (!isFailover) {
+                ExampleImpl.changePath();
+            }
+            else{
+                System.out.println("Cannot change path although QoE low.");
+            }
         }
 
         System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
-    private void findNextNodeConnector(List<DomainLink> linkList){
+    private Long monitorDelay(GraphPath<Integer, DomainLink> path){
+        QoSOperations qoSOperations = new QoSOperations(db);
 
-        int i = 0;
-        for (DomainLink domainLink : linkList){
-            if (i <= (linkList.size()-1)){
-                nextNodeConnectors.put(domainLink.getLink().getSource().getSourceNode().getValue() ,domainLink.getLink().getDestination().getDestTp().getValue());
+        if (rpcProviderRegistry != null) {
+            packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
+
+            LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
+            //   List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
+            List<DomainLink> linkList = path.getEdgeList();
+
+            //find next node connector where each packet should arrive at
+            findNextNodeConnector(linkList);
+            //for (DomainLink link : ExampleImpl.mainGraphWalk.getEdgeList()) {
+            for (DomainLink link : linkList) {
+
+                if (!NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())){
+                    System.out.println("A link in the path is down.");
+                }
+                if (!link.getLink().getLinkId().getValue().contains("host") && NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())) {
+                    Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));
+                    while (packetReceivedFromController == false){
+
+                    }
+                    latencies.add(latency);
+                }
             }
         }
+
+        Long totalDelay = 0L;
+        //compute path's total delay
+        if (latencies.size() > 0){
+            totalDelay = qoSOperations.computeTotalDelay(latencies);
+        }
+        latencies.clear();
+        return totalDelay;
     }
 
-    private Long monitorDelay(){
+  /*  private Long monitorDelay(GraphPath<Integer, DomainLink> pathh){
         QoSOperations qoSOperations = new QoSOperations(db);
 
         if (rpcProviderRegistry != null) {
@@ -109,6 +145,16 @@ public class MonitorLinksTask extends TimerTask{
         }
         latencies.clear();
         return totalDelay;
+    }*/
+
+    private void findNextNodeConnector(List<DomainLink> linkList){
+
+        int i = 0;
+        for (DomainLink domainLink : linkList){
+            if (i <= (linkList.size()-1)){
+                nextNodeConnectors.put(domainLink.getLink().getSource().getSourceNode().getValue() ,domainLink.getLink().getDestination().getDestTp().getValue());
+            }
+        }
     }
 
     private double monitorPacketLoss(){

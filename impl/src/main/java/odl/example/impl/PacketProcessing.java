@@ -15,6 +15,10 @@ import org.slf4j.LoggerFactory;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * The class which listens for incoming packets and processes them.
+ *
+ */
 public class PacketProcessing implements PacketProcessingListener {
 
     private final Logger LOG = LoggerFactory.getLogger(PacketProcessing.class);
@@ -56,26 +60,10 @@ public class PacketProcessing implements PacketProcessingListener {
         if(srcMac.equals(sourceMac)) {
             Long timeNow = System.currentTimeMillis();
             Long sentTime = PacketSender.sentTimes.get(packetReceived.getMatch().getInPort().getValue());
-      //      System.out.println("Packet received from " + packetReceived.getMatch().getInPort().getValue());
-      //      System.out.println("Time now is: " + timeNow);
-     //       System.out.println("Sent time is : " + sentTime);
             Long latency = timeNow - sentTime;
             LatencyMonitor.latency = latency;
             MonitorLinksTask.packetReceivedFromController = true;
         }
-    }
-
-    public void addDestMac(String address) {
-        dstMacs.add(address);
-    }
-
-    public boolean isDestination(String address) {
-        for (String mac : dstMacs) {
-            if (mac.equals(address)) {
-                return true;
-            }
-        }
-        return false;
     }
 
 }
