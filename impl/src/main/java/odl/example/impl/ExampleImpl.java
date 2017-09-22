@@ -239,7 +239,6 @@ public class ExampleImpl implements OdlexampleService {
                 SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
                 switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
                 switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
-         //       switchConfigurator.configureFailoverPath(failoverPath.getEdgeList(), inputPortsFailover, outputPortsFailover);
             }
         }
     }
