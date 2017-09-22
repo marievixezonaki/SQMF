@@ -13,12 +13,6 @@ In order to run this project :
 4) Using Mininet, open a network topology. For this project, the topology was created with the following script (thesis.py):
 
 
-        """Custom topology example
-
-        Nine switches connected in a circle plus two hosts.
-
-        """
-
         from mininet.topo import Topo
         import time, re, sys, subprocess, os
         from mininet.cli import CLI
