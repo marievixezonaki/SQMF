@@ -60,8 +60,7 @@ In order to run this project :
     and was opened using the commands :
  
         sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
-
-        	pingall
+	pingall
 
 
 
