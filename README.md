@@ -57,6 +57,6 @@ In order to run this project :
                 topos = { 'mytopo': ( lambda: MyTopo() ) }
 
 
-and was opened using the command :
-
-    sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
+    and was opened using the command :
+ 
+        sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
