@@ -18,6 +18,13 @@ module odlexample {
         }
     }
 
+    typedef ApplicationType {
+        type enumeration {
+            enum "VoIP";
+            enum "Video";
+        }
+    }
+
     rpc startMonitoringLinks{
         input{
             leaf srcNode {
@@ -26,8 +33,11 @@ module odlexample {
             leaf dstNode {
                 type string;
             }
-            leaf QoEThreshold{
+            leaf QoEThreshold {
                 type string;
+            }
+            leaf application {
+                type ApplicationType;
             }
         }
     }

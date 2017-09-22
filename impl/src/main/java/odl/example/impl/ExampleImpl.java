@@ -50,6 +50,7 @@ public class ExampleImpl implements OdlexampleService {
     private static Timer timer;
     private static MonitorLinksTask monitorLinksTask;
     public static boolean fastFailover = false;
+    public static String applicationType = "";
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -61,18 +62,19 @@ public class ExampleImpl implements OdlexampleService {
     /**
      * The method which starts monitoring the packet loss and delay of links, when the user asks it.
      *
-     * @param input     The input of the RPC, containing the source node, the destination node and the QoE threshold.
+     * @param input     The input of the RPC, containing the source node, the destination node, the QoE threshold and the application type (VoIP or video).
      */
     @Override
     public Future<RpcResult<Void>> startMonitoringLinks(StartMonitoringLinksInput input) {
 
         //read user input
         if (input != null){
-            if (input.getSrcNode() != null && input.getDstNode() != null && input.getQoEThreshold() != null){
+            if (input.getSrcNode() != null && input.getDstNode() != null && input.getQoEThreshold() != null && input.getApplication() != null){
                 srcNode = input.getSrcNode();
                 dstNode = input.getDstNode();
                 Float QoE = Float.parseFloat(input.getQoEThreshold());
                 QoEThreshold = QoE.doubleValue();
+                applicationType = input.getApplication().getName();
             }
         }
         else{
@@ -157,9 +159,15 @@ public class ExampleImpl implements OdlexampleService {
     @Override
     public Future<RpcResult<Void>> stopMonitoringLinks() {
         System.out.println("Stopping the monitoring of links.");
-        monitorLinksTask.cancel();
+ /*       monitorLinksTask.cancel();
         timer.cancel();
-        timer.purge();
+        timer.purge();*/
+
+        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, "");
+    //    monitorLinksTask.computeVideoFPS1("/home/maxez/Downloads/small.mp4");
+    //    monitorLinksTask.computeVideoFPS2("/home/maxez/Downloads/small.mp4");
+    //    monitorLinksTask.computeVideoFPS3("/home/maxez/Downloads/small.mp4");
+
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 

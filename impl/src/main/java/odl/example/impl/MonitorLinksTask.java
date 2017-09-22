@@ -6,11 +6,15 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 package odl.example.impl;
-
 import org.jgrapht.GraphPath;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
+import javax.media.*;
+import javax.media.NotConfiguredError;
+import javax.media.format.VideoFormat;
+import javax.media.protocol.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,7 +47,6 @@ public class MonitorLinksTask extends TimerTask{
     public void run() {
 
         //monitor packet loss and delay
-        QoSOperations qoSOperations = new QoSOperations(db);
         Long delay = monitorDelay(ExampleImpl.mainGraphWalk);
         double packetLoss = monitorPacketLoss();
 
@@ -51,9 +54,15 @@ public class MonitorLinksTask extends TimerTask{
         System.out.println("Total loss is " + packetLoss + "%");
 
         //compute path's QoE
-        double pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
+        double pathMOS = -1;
+        if (ExampleImpl.applicationType.equals(Applications.VoIP.getName())) {
+            pathMOS = Applications.VoIP.estimateQoE(delay, packetLoss);
+        }
+        else if (ExampleImpl.applicationType.equals(Applications.Video.getName())){
+            pathMOS = Applications.Video.estimateQoE(delay, packetLoss);
+        }
         System.out.println("MOS is " + pathMOS);
-        if (pathMOS < ExampleImpl.QoEThreshold) {
+        if ( (pathMOS > 0) && (pathMOS < ExampleImpl.QoEThreshold) ) {
             System.out.println("MOS is lower than the threshold.");
             //cancel previous timer task and monitor the new main path
             if (!isFailover) {
@@ -70,7 +79,6 @@ public class MonitorLinksTask extends TimerTask{
     }
 
     private Long monitorDelay(GraphPath<Integer, DomainLink> path){
-        QoSOperations qoSOperations = new QoSOperations(db);
 
         if (rpcProviderRegistry != null) {
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
@@ -81,7 +89,6 @@ public class MonitorLinksTask extends TimerTask{
             //find next node connector where each packet should arrive at
             findNextNodeConnector(linkList);
             for (DomainLink link : linkList) {
-
                 if (!NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())){
                     System.out.println("A link in the path is down.");
                     linkFailure = true;
@@ -95,11 +102,10 @@ public class MonitorLinksTask extends TimerTask{
                 }
             }
         }
-
         Long totalDelay = 0L;
         //compute path's total delay
         if (latencies.size() > 0){
-            totalDelay = qoSOperations.computeTotalDelay(latencies);
+            totalDelay = computeTotalDelay(latencies);
         }
         latencies.clear();
         return totalDelay;
@@ -166,5 +172,126 @@ public class MonitorLinksTask extends TimerTask{
         }
         return packetLoss;
     }
+
+    /**
+     * The method which computes the total delay of a path.
+     *
+     * @param delays    A list containing the delay of each link in the path.
+     * @return          It returns the path's total delay.
+     */
+    public Long computeTotalDelay(List<Long> delays){
+        Long totalDelay = 0L;
+        for (Long delay : delays){
+            totalDelay += delay;
+        }
+        return totalDelay;
+    }
+
+    public void computeVideoFPS1(String videoLocation){
+
+        //Way 1
+        try {
+            Processor myProcessor = Manager.createProcessor(new MediaLocator(videoLocation));
+     //       Format relax = myProcessor.getContentDescriptor().relax();
+       //     if(relax instanceof VideoFormat) {
+         //       double frameRate = ((VideoFormat)relax).getFrameRate();
+           //     System.out.println("FPS 1 is " + frameRate);
+           // }
+        } catch( NoProcessorException | /*NotConfiguredError |*/ IOException e ) {
+            e.printStackTrace();
+        }
+
+        //Way 2
+   /*     try {
+            Processor myProcessor = Manager.createProcessor(new MediaLocator(""));
+            DataSource dataSource = myProcessor.getDataOutput();
+            if(dataSource instanceof URLDataSource) {
+                PullSourceStream[] streams = ((URLDataSource)dataSource).getStreams();
+                if(streams.length > 0) {
+                    Format relax = streams[0].getContentDescriptor().relax();
+                    if(relax instanceof VideoFormat) {
+                        System.out.println(((VideoFormat)relax).getFrameRate());
+                    }
+                }
+            }
+            Format relax = myProcessor.getContentDescriptor().relax();
+            if(relax instanceof VideoFormat) {
+                double frameRate = ((VideoFormat)relax).getFrameRate();
+                System.out.println("FPS is " + frameRate);
+            }
+        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
+            e.printStackTrace();
+        }*/
+
+        //Way 3
+  /*      try {
+            Processor myProcessor = Manager.createProcessor(new MediaLocator(""));
+            DataSource dataSource = myProcessor.getDataOutput();
+            if(dataSource instanceof PullBufferDataSource) { // or PushBufferDataSource
+                PullBufferStream[] streams = ((PullBufferDataSource)dataSource).getStreams();
+                if(streams.length > 0) {
+                    Format relax = streams[0].getFormat();
+                    if(relax instanceof VideoFormat) {
+                        System.out.println(((VideoFormat)relax).getFrameRate());
+                    }
+                }
+            }
+            Format relax = myProcessor.getContentDescriptor().relax();
+            if(relax instanceof VideoFormat) {
+                double frameRate = ((VideoFormat)relax).getFrameRate();
+                System.out.println("FPS is " + frameRate);
+            }
+        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
+            e.printStackTrace();
+        }*/
+
+    }
+
+  /*  public void computeVideoFPS2(String videoLocation) {
+        try {
+            Processor myProcessor = Manager.createProcessor(new MediaLocator(videoLocation));
+            DataSource dataSource = myProcessor.getDataOutput();
+            if(dataSource instanceof URLDataSource) {
+                PullSourceStream[] streams = ((URLDataSource)dataSource).getStreams();
+                if(streams.length > 0) {
+                    Format relax = streams[0].getContentDescriptor().relax();
+                    if(relax instanceof VideoFormat) {
+                        System.out.println(((VideoFormat)relax).getFrameRate());
+                    }
+                }
+            }
+            Format relax = myProcessor.getContentDescriptor().relax();
+            if(relax instanceof VideoFormat) {
+                double frameRate = ((VideoFormat)relax).getFrameRate();
+                System.out.println("FPS 2 is " + frameRate);
+            }
+        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
+            e.printStackTrace();
+        }
+     }
+
+    public void computeVideoFPS3(String videoLocation) {
+        try {
+            Processor myProcessor = Manager.createProcessor(new MediaLocator(videoLocation));
+            DataSource dataSource = myProcessor.getDataOutput();
+            if(dataSource instanceof PullBufferDataSource) { // or PushBufferDataSource
+                PullBufferStream[] streams = ((PullBufferDataSource)dataSource).getStreams();
+                if(streams.length > 0) {
+                    Format relax = streams[0].getFormat();
+                    if(relax instanceof VideoFormat) {
+                        System.out.println(((VideoFormat)relax).getFrameRate());
+                    }
+                }
+            }
+            Format relax = myProcessor.getContentDescriptor().relax();
+            if(relax instanceof VideoFormat) {
+                double frameRate = ((VideoFormat)relax).getFrameRate();
+                System.out.println("FPS is " + frameRate);
+            }
+        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
+            e.printStackTrace();
+        }
+    }*/
+
 }
 
