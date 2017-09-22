@@ -12,6 +12,7 @@ In order to run this project :
 
 4) Using Mininet, open a network topology. For this project, the topology was created with the following script (thesis.py):
 
+
     """Custom topology example
 
     Nine switches connected in a circle plus two hosts:
@@ -61,7 +62,8 @@ topology enables one to pass in '--topo=mytopo' from the command line.
         self.addLink(host1, switch1)
         self.addLink(host2, switch8)
 
-    topos = { 'mytopo': ( lambda: MyTopo() ) }
+        topos = { 'mytopo': ( lambda: MyTopo() ) }
+
 
 and was opened using the command :
 
