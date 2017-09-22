@@ -15,10 +15,8 @@ In order to run this project :
 
         """Custom topology example
 
-        Nine switches connected in a circle plus two hosts:
+        Nine switches connected in a circle plus two hosts.
 
-        Adding the 'topos' dict with a key/value pair to generate our newly defined
-topology enables one to pass in '--topo=mytopo' from the command line.
         """
 
         from mininet.topo import Topo
