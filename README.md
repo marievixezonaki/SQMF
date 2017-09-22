@@ -60,9 +60,9 @@ In order to run this project :
     and was opened using the commands :
  
         sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
-	pingall
 
 
+5) pingall in Mininet.
 
-5) Open the ODL DLUX from the link http://localhost:8181/index.html#/ and select the YANG UI tab at the left sidebar.
+6) Open the ODL DLUX from the link http://localhost:8181/index.html#/ and select the YANG UI tab at the left sidebar.
 From there, select odlexample-->operations and then the RPC you want to use.
