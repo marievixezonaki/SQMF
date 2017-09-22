@@ -19,7 +19,6 @@ import java.util.TimerTask;
 /**
  * The class implementing a task which monitors the topology's links.
  *
- * @author Marievi Xezonaki
  */
 public class MonitorLinksTask extends TimerTask{
 
@@ -32,6 +31,7 @@ public class MonitorLinksTask extends TimerTask{
     volatile static boolean packetReceivedFromController = false;
     private static HashMap<String, String> nextNodeConnectors = new HashMap();
     public static boolean isFailover = false;
+    private boolean linkFailure = false;
 
     public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac){
         this.db = db;
@@ -45,28 +45,21 @@ public class MonitorLinksTask extends TimerTask{
         //monitor packet loss and delay
         QoSOperations qoSOperations = new QoSOperations(db);
         Long delay = monitorDelay(ExampleImpl.mainGraphWalk);
-        Long delayFailover = monitorDelay(ExampleImpl.failoverGraphWalk);
         double packetLoss = monitorPacketLoss();
 
         System.out.println("Total delay is " + delay + " ms");
-        System.out.println("Total delay for failover is " + delayFailover + " ms");
         System.out.println("Total loss is " + packetLoss + "%");
 
         //compute path's QoE
-        double pathMOS;
-        if (!isFailover) {
-            pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
-        }
-        else{
-            pathMOS = qoSOperations.QoEEstimation(delayFailover, packetLoss);
-        }
-
+        double pathMOS = qoSOperations.QoEEstimation(delay, packetLoss);
         System.out.println("MOS is " + pathMOS);
         if (pathMOS < ExampleImpl.QoEThreshold) {
             System.out.println("MOS is lower than the threshold.");
             //cancel previous timer task and monitor the new main path
             if (!isFailover) {
-                ExampleImpl.changePath();
+                if (!ExampleImpl.fastFailover) {
+                    ExampleImpl.changePath();
+                }
             }
             else{
                 System.out.println("Cannot change path although QoE low.");
@@ -83,16 +76,15 @@ public class MonitorLinksTask extends TimerTask{
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
             LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
-            //   List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
             List<DomainLink> linkList = path.getEdgeList();
 
             //find next node connector where each packet should arrive at
             findNextNodeConnector(linkList);
-            //for (DomainLink link : ExampleImpl.mainGraphWalk.getEdgeList()) {
             for (DomainLink link : linkList) {
 
                 if (!NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())){
                     System.out.println("A link in the path is down.");
+                    linkFailure = true;
                 }
                 if (!link.getLink().getLinkId().getValue().contains("host") && NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())) {
                     Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));

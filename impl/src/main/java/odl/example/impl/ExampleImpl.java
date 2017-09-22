@@ -49,6 +49,7 @@ public class ExampleImpl implements OdlexampleService {
     public static double QoEThreshold;
     private static Timer timer;
     private static MonitorLinksTask monitorLinksTask;
+    public static boolean fastFailover = false;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -170,6 +171,7 @@ public class ExampleImpl implements OdlexampleService {
      */
     @Override
     public Future<RpcResult<Void>> startFailover(StartFailoverInput input) {
+        fastFailover = true;
         LOG.info("Configuring switches for resilience.");
 
         if (input.getSrcNode() != null && input.getDstNode() != null) {

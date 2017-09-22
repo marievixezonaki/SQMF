@@ -127,11 +127,12 @@ public class QoSOperations {
         else {
             h = 0;
         }
-        System.out.println("h is " + h);
-
         double R = 94.2 - 0.024*delay - 0.11*h*(delay-177.3) - 11 - 40*Math.log(1+10*packetLoss);
-        System.out.println("R is " + R);
-
+     //   double t1 = 0.024*delay;
+     //   double t2 = 0.11*h*(delay-177.3);
+     //   double t3 = 40*Math.log(1+10*packetLoss);
+     //   System.out.println("R = 94.2 - " + t1 + " - " + t2 + " - 11 - " + t3 + " = " + R);
+        System.out.println("R = " + R);
         double MOS;
         if (R < 0){
             MOS = 0;
@@ -139,7 +140,6 @@ public class QoSOperations {
         else{
             MOS = 1 + 0.035*R + R*(R-60)*(100-R)/1000000;
         }
-        System.out.println("h is " + h);
 
         return MOS;
     }
