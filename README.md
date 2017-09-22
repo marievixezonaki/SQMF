@@ -12,24 +12,24 @@ In order to run this project :
 
 4) Using Mininet, open a network topology. For this project, the topology was created with the following script (thesis.py):
 
-"""Custom topology example
+    """Custom topology example
 
-Nine switches connected in a circle plus two hosts:
+    Nine switches connected in a circle plus two hosts:
 
-Adding the 'topos' dict with a key/value pair to generate our newly defined
+    Adding the 'topos' dict with a key/value pair to generate our newly defined
 topology enables one to pass in '--topo=mytopo' from the command line.
-"""
+    """
 
-from mininet.topo import Topo
-import time, re, sys, subprocess, os
-from mininet.cli import CLI
-from mininet.net import Mininet
-from mininet.link import TCLink
+    from mininet.topo import Topo
+    import time, re, sys, subprocess, os
+    from mininet.cli import CLI
+    from mininet.net import Mininet
+    from mininet.link import TCLink
 
-class MyTopo( Topo ):
-    "Simple topology example."
+    class MyTopo( Topo ):
+        "Simple topology example."
 
-    def __init__( self ):
+        def __init__( self ):
         "Create custom topo."
 
         # Initialize topology
@@ -61,10 +61,8 @@ class MyTopo( Topo ):
         self.addLink(host1, switch1)
         self.addLink(host2, switch8)
 
-topos = { 'mytopo': ( lambda: MyTopo() ) }
-
-
+    topos = { 'mytopo': ( lambda: MyTopo() ) }
 
 and was opened using the command :
 
-sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
+    sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
