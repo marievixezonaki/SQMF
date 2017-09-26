@@ -47,7 +47,6 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
 
         LOG.info("ExampleProvider Session Initiated");
         DataBroker db = session.getSALService(DataBroker.class);
-
         //Setting the Topology Listener for catching topology changes and updating the network graph
         InstanceIdentifier<Link> linkInstance = InstanceIdentifier.builder(NetworkTopology.class)
                 .child(Topology.class, new TopologyKey(new TopologyId("flow:1"))).child(Link.class).build();

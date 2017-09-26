@@ -7,8 +7,17 @@
  */
 package odl.example.impl;
 
-public interface QoEEstimation {
+public class Video {
 
-    double estimateQoE(Long delay, double packetLoss);
-    String getName();
+    public static String getName(){
+        return "Video";
+    }
+
+    public static double estimateQoE(int frameRate, float bitRate, double packetLoss) {
+
+        double MOS = -1;
+
+        return MOS;
+    }
+
 }

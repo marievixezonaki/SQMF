@@ -7,13 +7,17 @@
  */
 package odl.example.impl;
 
+import org.opendaylight.controller.liblldp.BitBufferHelper;
+import org.opendaylight.controller.liblldp.BufferException;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.Match;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.ethernet.rev140528.*;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.ethernet.rev140528.ethernet.packet.fields.Header8021qBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingListener;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketReceived;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 
 /**
  * The class which listens for incoming packets and processes them.
@@ -22,19 +26,24 @@ import java.util.List;
 public class PacketProcessing implements PacketProcessingListener {
 
     private final Logger LOG = LoggerFactory.getLogger(PacketProcessing.class);
-    private List<String> dstMacs;
     public static Integer ingressUdpPackets = 0;
     public static Integer egressUdpPackets = 0;
+    public static Integer ingressBits = 0;
+    public static Integer egressBits = 0;
     public String srcNode;
     public String dstNode;
     private String sourceMac;
+    public static final Integer ETHERTYPE_8021Q = 0x8100;
+    public static final Integer ETHERTYPE_QINQ = 0x9100;
+    private int udpPacketSize;
+    public static boolean videoHasStarted = false;
+    public static Long videoStartTime = 0L;
 
     public PacketProcessing(String srcNode, String dstNode, String srcMac) {
         LOG.info("PacketProcessing loaded successfully");
         this.srcNode = srcNode;
         this.dstNode = dstNode;
         this.sourceMac = srcMac;
-        dstMacs = new LinkedList<>();
     }
 
     @Override
@@ -43,14 +52,30 @@ public class PacketProcessing implements PacketProcessingListener {
         byte[] payload = packetReceived.getPayload();
         byte protocol = PacketParsingUtils.extractIPprotocol(payload);
         if (protocol == 0x11) {
+            if (!videoHasStarted && videoStartTime == 0L){
+                videoStartTime = System.currentTimeMillis();
+                videoHasStarted = true;
+            }
             Match match = packetReceived.getMatch();
             String[] matchParts = match.getInPort().getValue().split(":");
             String switchWhichReceivedPacket = matchParts[0].concat(":").concat(matchParts[1]);
             if (switchWhichReceivedPacket.equals(srcNode)){
+                try {
+                    udpPacketSize = decode(packetReceived);
+                } catch (BufferException e) {
+                    e.printStackTrace();
+                }
                 ingressUdpPackets++;
+                ingressBits += udpPacketSize;
             }
             else if (switchWhichReceivedPacket.equals(dstNode)){
+                try {
+                    udpPacketSize = decode(packetReceived);
+                } catch (BufferException e) {
+                    e.printStackTrace();
+                }
                 egressUdpPackets++;
+                egressBits += udpPacketSize;
             }
         }
 
@@ -66,4 +91,22 @@ public class PacketProcessing implements PacketProcessingListener {
         }
     }
 
+    public int decode(PacketReceived packetReceived) throws BufferException {
+        byte[] data = packetReceived.getPayload();
+        try {
+            Integer nextField = BitBufferHelper.getInt(BitBufferHelper.getBits(data, 96, 16));
+            int extraHeaderBits = 0;
+            while (nextField.equals(ETHERTYPE_8021Q) || nextField.equals(ETHERTYPE_QINQ)) {
+                nextField = BitBufferHelper.getInt(BitBufferHelper.getBits(data, 128 + extraHeaderBits, 16));
+                extraHeaderBits += 32;
+            }
+         //   int headerSize = (112 + extraHeaderBits);
+            int packetSize = packetReceived.getPayload().length*8;
+          //  int packetSize = headerSize + payloadSize;
+            return packetSize;
+        } catch (BufferException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
 }

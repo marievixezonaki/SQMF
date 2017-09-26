@@ -6,15 +6,12 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 package odl.example.impl;
+
 import org.jgrapht.GraphPath;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
-import javax.media.*;
-import javax.media.NotConfiguredError;
-import javax.media.format.VideoFormat;
-import javax.media.protocol.*;
-import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,41 +27,61 @@ public class MonitorLinksTask extends TimerTask{
     private PacketProcessingService packetProcessingService;
     private RpcProviderRegistry rpcProviderRegistry;
     private List<Long> latencies = new ArrayList<>();
-    private Integer ingressPackets = 0, egressPackets = 0;
+    private Integer ingressPackets = 0, egressPackets = 0, ingressBits = 0, egressBits = 0;
     String sourceMac;
     volatile static boolean packetReceivedFromController = false;
     private static HashMap<String, String> nextNodeConnectors = new HashMap();
     public static boolean isFailover = false;
     private boolean linkFailure = false;
+    private String videoAbsolutePath;
+    private static Long lastQoEEstimationTime = 0L;
 
-    public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac){
+    public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac, String videoAbsolutePath){
         this.db = db;
         this.rpcProviderRegistry = rpcProviderRegistry;
         this.sourceMac = srcMac;
+        this.videoAbsolutePath = videoAbsolutePath;
     }
 
     @Override
     public void run() {
 
-        //monitor packet loss and delay
-        Long delay = monitorDelay(ExampleImpl.mainGraphWalk);
-        double packetLoss = monitorPacketLoss();
-
-        System.out.println("Total delay is " + delay + " ms");
-        System.out.println("Total loss is " + packetLoss + "%");
-
-        //compute path's QoE
         double pathMOS = -1;
-        if (ExampleImpl.applicationType.equals(Applications.VoIP.getName())) {
-            pathMOS = Applications.VoIP.estimateQoE(delay, packetLoss);
+
+        // if application streamed is VoIP
+        if (ExampleImpl.applicationType.equals(VoIP.getName())){
+            Long delay = monitorDelay(ExampleImpl.mainGraphWalk);
+            double packetLoss = monitorPacketLoss();
+            System.out.println("Total delay is " + delay + " ms");
+            System.out.println("Total loss is " + packetLoss + "%");
+            pathMOS = VoIP.estimateQoE(delay, packetLoss);
         }
-        else if (ExampleImpl.applicationType.equals(Applications.Video.getName())){
-            pathMOS = Applications.Video.estimateQoE(delay, packetLoss);
+        // if application streamed is Video
+        else if (ExampleImpl.applicationType.equals(Video.getName())){
+            double packetLoss = monitorPacketLoss();
+            int bitsReceivedCount = findBits();
+            int frameRate = computeVideoFPS(videoAbsolutePath);
+            float N = computeN(frameRate);
+            float bitRate;
+            if (frameRate != -1 && N != -1) {
+                bitRate = frameRate * bitsReceivedCount / N;
+            }
+            else {
+                bitRate = -1L;
+            }
+            if (bitRate != -1){
+      //          pathMOS = Video.estimateQoE(frameRate, bitRate, packetLoss);
+            }
+            System.out.println("Total loss is " + packetLoss + "%");
+            System.out.println("BitsReceivedCount is " + bitsReceivedCount + " bits");
+            System.out.println("Frame rate is " + frameRate + " fps");
+            System.out.println("N is " + N);
+            System.out.println("Bitrate is " + bitRate);
         }
+
         System.out.println("MOS is " + pathMOS);
-        if ( (pathMOS > 0) && (pathMOS < ExampleImpl.QoEThreshold) ) {
+        if ( (pathMOS >= 0) && (pathMOS < ExampleImpl.QoEThreshold) ) {
             System.out.println("MOS is lower than the threshold.");
-            //cancel previous timer task and monitor the new main path
             if (!isFailover) {
                 if (!ExampleImpl.fastFailover) {
                     ExampleImpl.changePath();
@@ -74,7 +91,9 @@ public class MonitorLinksTask extends TimerTask{
                 System.out.println("Cannot change path although QoE low.");
             }
         }
-
+    //    else if (pathMOS < 0){
+    //        System.out.println("Something went wrong while computing MOS.");
+     //   }
         System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
@@ -111,40 +130,6 @@ public class MonitorLinksTask extends TimerTask{
         return totalDelay;
     }
 
-  /*  private Long monitorDelay(GraphPath<Integer, DomainLink> pathh){
-        QoSOperations qoSOperations = new QoSOperations(db);
-
-        if (rpcProviderRegistry != null) {
-            packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
-
-            LatencyMonitor latencyMonitor = new LatencyMonitor(db, this.packetProcessingService);
-            List<DomainLink> linkList = ExampleImpl.mainGraphWalk.getEdgeList();
-            //find next node connector where each packet should arrive at
-            findNextNodeConnector(linkList);
-            for (DomainLink link : ExampleImpl.mainGraphWalk.getEdgeList()) {
-                if (!NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())){
-                    System.out.println("Link failure!");
-                    linkFailure = true;
-                }
-                if (!link.getLink().getLinkId().getValue().contains("host") && NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())) {
-                    Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));
-                    while (packetReceivedFromController == false){
-
-                    }
-                    latencies.add(latency);
-                }
-            }
-        }
-
-        Long totalDelay = 0L;
-        //compute path's total delay
-        if (latencies.size() > 0){
-            totalDelay = qoSOperations.computeTotalDelay(latencies);
-        }
-        latencies.clear();
-        return totalDelay;
-    }*/
-
     private void findNextNodeConnector(List<DomainLink> linkList){
 
         int i = 0;
@@ -159,6 +144,7 @@ public class MonitorLinksTask extends TimerTask{
         Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
+        System.out.println("Packets " + currentIngressPackets + " " + currentEgressPackets);
 
         ingressPackets = PacketProcessing.ingressUdpPackets;
         egressPackets = PacketProcessing.egressUdpPackets;
@@ -171,6 +157,39 @@ public class MonitorLinksTask extends TimerTask{
             packetLoss = 0;
         }
         return packetLoss;
+    }
+
+    private int findBits(){
+
+        Integer currentIngressBits = PacketProcessing.ingressBits - ingressBits;
+        Integer currentEgressBits = PacketProcessing.egressBits - egressBits;
+        System.out.println("Bits " + currentIngressBits + " " + currentEgressBits);
+        ingressBits = PacketProcessing.ingressBits;
+        egressBits = PacketProcessing.egressBits;
+        return currentEgressBits;
+    }
+
+    public float computeN(int frameRate){
+        float N = -1;
+        Long timeNow = System.currentTimeMillis();
+        if (lastQoEEstimationTime == 0L){
+            if (PacketProcessing.videoStartTime != 0L && PacketProcessing.videoHasStarted) {
+                Long diff = timeNow - PacketProcessing.videoStartTime;
+                System.out.println("Time now " + timeNow + " - video start time " + PacketProcessing.videoHasStarted + " = " + diff);
+                float timeElapsed = (timeNow - PacketProcessing.videoStartTime)/(float)1000;
+                N = frameRate*timeElapsed;
+
+            }
+        }
+        else {
+            Long diff = timeNow - lastQoEEstimationTime;
+            System.out.println("Time now " + timeNow + " - last time " + lastQoEEstimationTime + " = " + diff);
+            float timeElapsed = (timeNow - lastQoEEstimationTime)/(float)1000;
+            N  = frameRate*timeElapsed;
+        }
+        lastQoEEstimationTime = timeNow;
+
+        return N;
     }
 
     /**
@@ -187,111 +206,30 @@ public class MonitorLinksTask extends TimerTask{
         return totalDelay;
     }
 
-    public void computeVideoFPS1(String videoLocation){
+    public int computeVideoFPS(String videoLocation){
 
-        //Way 1
-        try {
-            Processor myProcessor = Manager.createProcessor(new MediaLocator(videoLocation));
-     //       Format relax = myProcessor.getContentDescriptor().relax();
-       //     if(relax instanceof VideoFormat) {
-         //       double frameRate = ((VideoFormat)relax).getFrameRate();
-           //     System.out.println("FPS 1 is " + frameRate);
-           // }
-        } catch( NoProcessorException | /*NotConfiguredError |*/ IOException e ) {
-            e.printStackTrace();
+        int frameRate;
+        String command = "ffmpeg -i " + videoLocation + " -hide_banner";
+        ExecuteShellCommand obj = new ExecuteShellCommand();
+        String output = obj.executeCommand(command);
+        if (output != null) {
+            String[] outputParts = output.split(",");
+            for (int i = 0; i < outputParts.length; i++){
+                if (outputParts[i].contains("fps")){
+                    String fps = outputParts[i];
+                    String[] fpsParts = fps.split(" ");
+                    if (fpsParts.length > 2){
+                        frameRate = Integer.parseInt(fpsParts[1]);
+                        System.out.println(frameRate);
+                        return frameRate;
+                    }
+                    break;
+                }
+            }
         }
-
-        //Way 2
-   /*     try {
-            Processor myProcessor = Manager.createProcessor(new MediaLocator(""));
-            DataSource dataSource = myProcessor.getDataOutput();
-            if(dataSource instanceof URLDataSource) {
-                PullSourceStream[] streams = ((URLDataSource)dataSource).getStreams();
-                if(streams.length > 0) {
-                    Format relax = streams[0].getContentDescriptor().relax();
-                    if(relax instanceof VideoFormat) {
-                        System.out.println(((VideoFormat)relax).getFrameRate());
-                    }
-                }
-            }
-            Format relax = myProcessor.getContentDescriptor().relax();
-            if(relax instanceof VideoFormat) {
-                double frameRate = ((VideoFormat)relax).getFrameRate();
-                System.out.println("FPS is " + frameRate);
-            }
-        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
-            e.printStackTrace();
-        }*/
-
-        //Way 3
-  /*      try {
-            Processor myProcessor = Manager.createProcessor(new MediaLocator(""));
-            DataSource dataSource = myProcessor.getDataOutput();
-            if(dataSource instanceof PullBufferDataSource) { // or PushBufferDataSource
-                PullBufferStream[] streams = ((PullBufferDataSource)dataSource).getStreams();
-                if(streams.length > 0) {
-                    Format relax = streams[0].getFormat();
-                    if(relax instanceof VideoFormat) {
-                        System.out.println(((VideoFormat)relax).getFrameRate());
-                    }
-                }
-            }
-            Format relax = myProcessor.getContentDescriptor().relax();
-            if(relax instanceof VideoFormat) {
-                double frameRate = ((VideoFormat)relax).getFrameRate();
-                System.out.println("FPS is " + frameRate);
-            }
-        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
-            e.printStackTrace();
-        }*/
-
+        return -1;
     }
 
-  /*  public void computeVideoFPS2(String videoLocation) {
-        try {
-            Processor myProcessor = Manager.createProcessor(new MediaLocator(videoLocation));
-            DataSource dataSource = myProcessor.getDataOutput();
-            if(dataSource instanceof URLDataSource) {
-                PullSourceStream[] streams = ((URLDataSource)dataSource).getStreams();
-                if(streams.length > 0) {
-                    Format relax = streams[0].getContentDescriptor().relax();
-                    if(relax instanceof VideoFormat) {
-                        System.out.println(((VideoFormat)relax).getFrameRate());
-                    }
-                }
-            }
-            Format relax = myProcessor.getContentDescriptor().relax();
-            if(relax instanceof VideoFormat) {
-                double frameRate = ((VideoFormat)relax).getFrameRate();
-                System.out.println("FPS 2 is " + frameRate);
-            }
-        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
-            e.printStackTrace();
-        }
-     }
-
-    public void computeVideoFPS3(String videoLocation) {
-        try {
-            Processor myProcessor = Manager.createProcessor(new MediaLocator(videoLocation));
-            DataSource dataSource = myProcessor.getDataOutput();
-            if(dataSource instanceof PullBufferDataSource) { // or PushBufferDataSource
-                PullBufferStream[] streams = ((PullBufferDataSource)dataSource).getStreams();
-                if(streams.length > 0) {
-                    Format relax = streams[0].getFormat();
-                    if(relax instanceof VideoFormat) {
-                        System.out.println(((VideoFormat)relax).getFrameRate());
-                    }
-                }
-            }
-            Format relax = myProcessor.getContentDescriptor().relax();
-            if(relax instanceof VideoFormat) {
-                double frameRate = ((VideoFormat)relax).getFrameRate();
-                System.out.println("FPS is " + frameRate);
-            }
-        } catch( NoProcessorException | NotConfiguredError | IOException e ) {
-            e.printStackTrace();
-        }
-    }*/
-
 }
+
 

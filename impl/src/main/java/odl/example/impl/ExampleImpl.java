@@ -7,22 +7,33 @@
  */
 package odl.example.impl;
 
+import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.*;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.awt.*;
 import java.util.*;
+import java.util.List;
+import java.util.Timer;
 import java.util.concurrent.Future;
 
 /**
@@ -51,6 +62,7 @@ public class ExampleImpl implements OdlexampleService {
     private static MonitorLinksTask monitorLinksTask;
     public static boolean fastFailover = false;
     public static String applicationType = "";
+    private String videoAbsolutePath;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -80,6 +92,15 @@ public class ExampleImpl implements OdlexampleService {
         else{
             LOG.info("A field of the input is empty, try again.");
             return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+        }
+
+        // if the application type is video, launch a file chooser to select a video file to be streamed
+        if (applicationType.equals(Video.getName())){
+            FileDialog dialog = new FileDialog((Frame)null, "Select File to Open");
+            dialog.setMode(FileDialog.LOAD);
+            dialog.setVisible(true);
+            videoAbsolutePath = dialog.getDirectory() + dialog.getFile();
+            System.out.println(videoAbsolutePath);
         }
 
         //first, add rules to ingress and egress nodes to forward their packets to controller
@@ -124,7 +145,7 @@ public class ExampleImpl implements OdlexampleService {
 
         //finally, start monitoring links
         timer = new Timer();
-        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring);
+        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath);
         timer.schedule(monitorLinksTask, 0, 5000);
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
@@ -159,14 +180,9 @@ public class ExampleImpl implements OdlexampleService {
     @Override
     public Future<RpcResult<Void>> stopMonitoringLinks() {
         System.out.println("Stopping the monitoring of links.");
- /*       monitorLinksTask.cancel();
+        monitorLinksTask.cancel();
         timer.cancel();
-        timer.purge();*/
-
-        MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, "");
-    //    monitorLinksTask.computeVideoFPS1("/home/maxez/Downloads/small.mp4");
-    //    monitorLinksTask.computeVideoFPS2("/home/maxez/Downloads/small.mp4");
-    //    monitorLinksTask.computeVideoFPS3("/home/maxez/Downloads/small.mp4");
+        timer.purge();
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
@@ -363,4 +379,41 @@ public class ExampleImpl implements OdlexampleService {
         }
     }
 
+    public static List<Link> getAllLinks(DataBroker db) {
+        List<Link> linkList = new ArrayList<>();
+
+        try {
+            TopologyId topoId = new TopologyId("flow:1");
+            InstanceIdentifier<Topology> nodesIid = InstanceIdentifier.builder(NetworkTopology.class).child(Topology.class, new TopologyKey(topoId)).toInstance();
+            ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
+            CheckedFuture<com.google.common.base.Optional<Topology>, ReadFailedException> nodesFuture = nodesTransaction
+                    .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
+            com.google.common.base.Optional<Topology> nodesOptional = nodesFuture.checkedGet();
+
+            if (nodesOptional != null && nodesOptional.isPresent())
+                linkList = nodesOptional.get().getLink();
+
+            return linkList;
+        } catch (Exception e) {
+
+            LOG.info("Node Fetching Failed");
+
+            return linkList;
+        }
+    }
+
+    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) throws ReadFailedException {
+        List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = new ArrayList<>();
+        InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(
+                Nodes.class).build();
+        ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
+        CheckedFuture<com.google.common.base.Optional<Nodes>, ReadFailedException> nodesFuture = nodesTransaction
+                .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
+        com.google.common.base.Optional<Nodes> nodesOptional = nodesFuture.checkedGet();
+
+        if (nodesOptional != null && nodesOptional.isPresent()) {
+            nodeList = nodesOptional.get().getNode();
+        }
+        return nodeList;
+    }
 }
