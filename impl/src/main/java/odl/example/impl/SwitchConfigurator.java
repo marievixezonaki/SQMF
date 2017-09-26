@@ -55,6 +55,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.group.types.rev131018.group
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeConnectorId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnector;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.node.NodeConnectorKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.EtherType;
@@ -62,6 +64,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.ethernet.match.fields.EthernetTypeBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.EthernetMatchBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.model.match.types.rev131026.match.IpMatchBuilder;
+import org.opendaylight.yangtools.yang.binding.Augmentation;
+import org.opendaylight.yangtools.yang.binding.DataContainer;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -685,6 +689,83 @@ public class SwitchConfigurator {
                         .build())
                 .build();
         actions.add(outputToControllerAction);
+
+        //ApplyActions
+        ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();
+        List<Instruction> instructions = new ArrayList<>();
+
+        //Instruction for Actions
+        Instruction applyActionsInstruction = new InstructionBuilder()
+                .setOrder(0).setInstruction(new ApplyActionsCaseBuilder()
+                        .setApplyActions(applyActions)
+                        .build())
+                .build();
+
+        instructions.add(applyActionsInstruction);
+
+        //Build all the instructions together, based on the Instructions list
+        Instructions allInstructions = new InstructionsBuilder()
+                .setInstruction(instructions)
+                .build();
+
+        flowBuilder
+                .setMatch(match)
+                .setBufferId(OFConstants.OFP_NO_BUFFER)
+                .setInstructions(allInstructions)
+                .setPriority(1000)
+                .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
+                .setFlags(new FlowModFlags(false, false, false, false, false));
+
+        return flowBuilder.build();
+    }
+
+    public void configureNodesForUDPTrafficForwarding(List<DomainLink> links, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
+
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+        List<DomainLink> domainLinks = links;
+        domainLinks.remove(domainLinks.get(domainLinks.size()-1));
+        for (DomainLink link : domainLinks){
+            Flow flowForUDPForwarding = createFlowForUDPForwarding(inputPorts.get(link.getLink().getDestination().getDestNode().getValue()), outputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+            InstanceIdentifier<Flow> instanceIdentifier = createInstanceIdentifierForFlow(link.getLink().getDestination().getDestNode().getValue(), flowForUDPForwarding);
+            transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifier, flowForUDPForwarding, true);
+        }
+
+        transaction.submit();
+    }
+
+    public Flow createFlowForUDPForwarding(Integer inPort, Integer outPort){
+        FlowBuilder flowBuilder = new FlowBuilder()
+                .setTableId((short) 0)
+                .setFlowName("flow" + flowId)
+                .setId(new FlowId(flowId.toString()));
+        flowId++;
+
+        NodeConnectorId inputPort = new NodeConnectorId(inPort.toString());
+
+        Match match = new MatchBuilder()
+                .setEthernetMatch(new EthernetMatchBuilder()
+                        .setEthernetType(new EthernetTypeBuilder()
+                                .setType(new EtherType(IP_ETHERTYPE.longValue()))
+                                .build())
+                        .build())
+                .setIpMatch(new IpMatchBuilder()
+                        .setIpProtocol(UDP_PROTOCOL.shortValue())
+                        .build())
+                .setInPort(inputPort)
+                .build();
+
+        ActionBuilder actionBuilder = new ActionBuilder();
+        List<Action> actions = new ArrayList<Action>();
+
+        //output to port
+        Action outputAction = actionBuilder
+                .setOrder(0).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setOutputNodeConnector(new Uri(outPort.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputAction);
 
         //ApplyActions
         ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();

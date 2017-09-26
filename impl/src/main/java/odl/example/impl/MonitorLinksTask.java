@@ -11,7 +11,6 @@ import org.jgrapht.GraphPath;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,7 +59,7 @@ public class MonitorLinksTask extends TimerTask{
         else if (ExampleImpl.applicationType.equals(Video.getName())){
             double packetLoss = monitorPacketLoss();
             int bitsReceivedCount = findBits();
-            int frameRate = computeVideoFPS(videoAbsolutePath);
+            float frameRate = computeVideoFPS(videoAbsolutePath);
             float N = computeN(frameRate);
             float bitRate;
             if (frameRate != -1 && N != -1) {
@@ -70,7 +69,7 @@ public class MonitorLinksTask extends TimerTask{
                 bitRate = -1L;
             }
             if (bitRate != -1){
-      //          pathMOS = Video.estimateQoE(frameRate, bitRate, packetLoss);
+                pathMOS = Video.estimateQoE(frameRate, bitRate, packetLoss);
             }
             System.out.println("Total loss is " + packetLoss + "%");
             System.out.println("BitsReceivedCount is " + bitsReceivedCount + " bits");
@@ -82,7 +81,7 @@ public class MonitorLinksTask extends TimerTask{
         System.out.println("MOS is " + pathMOS);
         if ( (pathMOS >= 0) && (pathMOS < ExampleImpl.QoEThreshold) ) {
             System.out.println("MOS is lower than the threshold.");
-            if (!isFailover) {
+            if (!isFailover && PacketProcessing.videoHasStarted) {
                 if (!ExampleImpl.fastFailover) {
                     ExampleImpl.changePath();
                 }
@@ -169,13 +168,13 @@ public class MonitorLinksTask extends TimerTask{
         return currentEgressBits;
     }
 
-    public float computeN(int frameRate){
+    public float computeN(float frameRate){
         float N = -1;
         Long timeNow = System.currentTimeMillis();
         if (lastQoEEstimationTime == 0L){
             if (PacketProcessing.videoStartTime != 0L && PacketProcessing.videoHasStarted) {
                 Long diff = timeNow - PacketProcessing.videoStartTime;
-                System.out.println("Time now " + timeNow + " - video start time " + PacketProcessing.videoHasStarted + " = " + diff);
+         //       System.out.println("Time now " + timeNow + " - video start time " + PacketProcessing.videoHasStarted + " = " + diff);
                 float timeElapsed = (timeNow - PacketProcessing.videoStartTime)/(float)1000;
                 N = frameRate*timeElapsed;
 
@@ -183,7 +182,7 @@ public class MonitorLinksTask extends TimerTask{
         }
         else {
             Long diff = timeNow - lastQoEEstimationTime;
-            System.out.println("Time now " + timeNow + " - last time " + lastQoEEstimationTime + " = " + diff);
+       //     System.out.println("Time now " + timeNow + " - last time " + lastQoEEstimationTime + " = " + diff);
             float timeElapsed = (timeNow - lastQoEEstimationTime)/(float)1000;
             N  = frameRate*timeElapsed;
         }
@@ -206,20 +205,24 @@ public class MonitorLinksTask extends TimerTask{
         return totalDelay;
     }
 
-    public int computeVideoFPS(String videoLocation){
+    public float computeVideoFPS(String videoLocation){
 
-        int frameRate;
+        float frameRate;
+        System.out.println("Computing fps");
+
         String command = "ffmpeg -i " + videoLocation + " -hide_banner";
+  //      System.out.println(command);
         ExecuteShellCommand obj = new ExecuteShellCommand();
         String output = obj.executeCommand(command);
         if (output != null) {
+     //       System.out.println(output);
             String[] outputParts = output.split(",");
             for (int i = 0; i < outputParts.length; i++){
                 if (outputParts[i].contains("fps")){
                     String fps = outputParts[i];
                     String[] fpsParts = fps.split(" ");
                     if (fpsParts.length > 2){
-                        frameRate = Integer.parseInt(fpsParts[1]);
+                        frameRate = Float.parseFloat(fpsParts[1]);
                         System.out.println(frameRate);
                         return frameRate;
                     }

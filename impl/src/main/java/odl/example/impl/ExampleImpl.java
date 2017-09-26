@@ -100,7 +100,6 @@ public class ExampleImpl implements OdlexampleService {
             dialog.setMode(FileDialog.LOAD);
             dialog.setVisible(true);
             videoAbsolutePath = dialog.getDirectory() + dialog.getFile();
-            System.out.println(videoAbsolutePath);
         }
 
         //first, add rules to ingress and egress nodes to forward their packets to controller
@@ -137,6 +136,7 @@ public class ExampleImpl implements OdlexampleService {
                    with specific MAC to controller (for delay monitoring) */
                 switchConfigurator.configureNodesForDelayMonitoring(mainGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
                 switchConfigurator.configureNodesForDelayMonitoring(failoverGraphWalk.getEdgeList(), srcMacForDelayMeasuring);
+                switchConfigurator.configureNodesForUDPTrafficForwarding(mainGraphWalk.getEdgeList(), inputPorts, outputPorts);
             }
         }
         else{
@@ -169,6 +169,7 @@ public class ExampleImpl implements OdlexampleService {
             findPorts(mainGraphWalk, domainNodes.get(srcNode), domainNodes.get(dstNode));
             SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
             switchConfigurator.configureIngressAndEgressForMonitoring(srcNode, dstNode, inputPorts, outputPorts);
+            switchConfigurator.configureNodesForUDPTrafficForwarding(mainGraphWalk.getEdgeList(), inputPorts, outputPorts);
         }
 
     }
@@ -180,10 +181,13 @@ public class ExampleImpl implements OdlexampleService {
     @Override
     public Future<RpcResult<Void>> stopMonitoringLinks() {
         System.out.println("Stopping the monitoring of links.");
-        monitorLinksTask.cancel();
-        timer.cancel();
-        timer.purge();
-
+        if (monitorLinksTask != null) {
+            monitorLinksTask.cancel();
+        }
+        if (timer != null) {
+            timer.cancel();
+            timer.purge();
+        }
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 
