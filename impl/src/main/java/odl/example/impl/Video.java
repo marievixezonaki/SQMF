@@ -23,19 +23,55 @@ public class Video {
         double DFrv = v6 + v7*bitRate;
         double DPplV = v10 + v11*Math.exp(-frameRate/v8) + v12*Math.exp(-bitRate/v9);
 
-      /*  System.out.println("OFr " + OFr);
-        System.out.println("IOfr " + IOfr);
-        System.out.println("DFrv " + DFrv);
-        System.out.println("DPplV " + DPplV);*/
+      //  System.out.println("OFr " + OFr);
+     //   System.out.println("IOfr " + IOfr);
+    //    System.out.println("DFrv " + DFrv);
+    //    System.out.println("DPplV " + DPplV);
 
-        double Icoding = IOfr*Math.exp(-Math.pow((Math.log(frameRate)-Math.log(OFr)), 2)/2*Math.pow(DFrv, 2));
+        double numeratorIcoding = -Math.pow((Math.log(frameRate)-Math.log(OFr)), 2);
+        double denominatorIcoding = 2*Math.pow(DFrv, 2);
+        double Icoding = IOfr*Math.exp(numeratorIcoding/denominatorIcoding);
         double Itransmission = Math.exp(-(packetLoss/DPplV));
-        System.out.println("Icoding " + Icoding);
-        System.out.println("Itransmission " + Itransmission);
-
+      //  System.out.println("Icoding " + Icoding);
+      //  System.out.println("Itransmission " + Itransmission);
         double MOS = 1 + Icoding*Itransmission;
-
         return MOS;
     }
 
+    public static String getVideoCodec(String videoLocation){
+        return null;
+    }
+
+    public static float getVideoFPS(String videoLocation){
+        float frameRate;
+        String command = "ffmpeg -i " + videoLocation + " -hide_banner";
+        //      System.out.println(command);
+        ExecuteShellCommand obj = new ExecuteShellCommand();
+        String output = obj.executeCommand(command);
+        if (output != null) {
+            //       System.out.println(output);
+            String[] outputParts = output.split(",");
+            for (int i = 0; i < outputParts.length; i++){
+                if (outputParts[i].contains("fps")){
+                    String fps = outputParts[i];
+                    String[] fpsParts = fps.split(" ");
+                    if (fpsParts.length > 2){
+                        frameRate = Float.parseFloat(fpsParts[1]);
+                        System.out.println(frameRate);
+                        return frameRate;
+                    }
+                    break;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public static int getKeyFrame(String videoLocation){
+        return -1;
+    }
+
+    public static String getVideoFormat(String videoLocation){
+        return null;
+    }
 }

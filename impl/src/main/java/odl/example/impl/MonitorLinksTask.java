@@ -33,13 +33,15 @@ public class MonitorLinksTask extends TimerTask{
     public static boolean isFailover = false;
     private boolean linkFailure = false;
     private String videoAbsolutePath;
+    private float videoFPS;
     private static Long lastQoEEstimationTime = 0L;
 
-    public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac, String videoAbsolutePath){
+    public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac, String videoAbsolutePath, float videoFPS){
         this.db = db;
         this.rpcProviderRegistry = rpcProviderRegistry;
         this.sourceMac = srcMac;
         this.videoAbsolutePath = videoAbsolutePath;
+        this.videoFPS = videoFPS;
     }
 
     @Override
@@ -59,27 +61,39 @@ public class MonitorLinksTask extends TimerTask{
         else if (ExampleImpl.applicationType.equals(Video.getName())){
             double packetLoss = monitorPacketLoss();
             int bitsReceivedCount = findBits();
-            float frameRate = computeVideoFPS(videoAbsolutePath);
+            //float frameRate = computeVideoFPS(videoAbsolutePath);
+            float frameRate = videoFPS;
             float N = computeN(frameRate);
+            float BR = computeVideoBitRate(videoAbsolutePath);
+
             float bitRate;
-            if (frameRate != -1 && N != -1) {
+         /*   if (frameRate != -1 && N != -1) {
                 bitRate = frameRate * bitsReceivedCount / N;
             }
             else {
                 bitRate = -1L;
+            }*/
+         /*   if (bitRate != -1){
+                pathMOS = Video.estimateQoE(frameRate, BR, packetLoss);
+            }*/
+
+            if (frameRate != -1){
+                pathMOS = Video.estimateQoE(frameRate, BR, packetLoss);
             }
-            if (bitRate != -1){
-                pathMOS = Video.estimateQoE(frameRate, bitRate, packetLoss);
-            }
-            System.out.println("Total loss is " + packetLoss + "%");
-            System.out.println("BitsReceivedCount is " + bitsReceivedCount + " bits");
-            System.out.println("Frame rate is " + frameRate + " fps");
-            System.out.println("N is " + N);
-            System.out.println("Bitrate is " + bitRate);
+
+       //     System.out.println("Total loss is " + packetLoss + "%");
+       //     System.out.println("BitsReceivedCount is " + bitsReceivedCount + " bits");
+       //     System.out.println("Frame rate is " + frameRate + " fps");
+       //     System.out.println("N is " + N);
+            System.out.println("FPS is " + frameRate);
+       //     System.out.println("Bitrate is " + bitRate);
+            System.out.println("BR is " + BR);
+            System.out.println("PLR is " + packetLoss);
+
         }
 
         System.out.println("MOS is " + pathMOS);
-        if ( (pathMOS >= 0) && (pathMOS < ExampleImpl.QoEThreshold) ) {
+        if ( linkFailure || ((pathMOS >= 0) && (pathMOS < ExampleImpl.QoEThreshold)) ) {
             System.out.println("MOS is lower than the threshold.");
             if (!isFailover && PacketProcessing.videoHasStarted) {
                 if (!ExampleImpl.fastFailover) {
@@ -173,22 +187,37 @@ public class MonitorLinksTask extends TimerTask{
         Long timeNow = System.currentTimeMillis();
         if (lastQoEEstimationTime == 0L){
             if (PacketProcessing.videoStartTime != 0L && PacketProcessing.videoHasStarted) {
-                Long diff = timeNow - PacketProcessing.videoStartTime;
-         //       System.out.println("Time now " + timeNow + " - video start time " + PacketProcessing.videoHasStarted + " = " + diff);
                 float timeElapsed = (timeNow - PacketProcessing.videoStartTime)/(float)1000;
                 N = frameRate*timeElapsed;
 
             }
         }
         else {
-            Long diff = timeNow - lastQoEEstimationTime;
-       //     System.out.println("Time now " + timeNow + " - last time " + lastQoEEstimationTime + " = " + diff);
             float timeElapsed = (timeNow - lastQoEEstimationTime)/(float)1000;
             N  = frameRate*timeElapsed;
         }
         lastQoEEstimationTime = timeNow;
 
         return N;
+    }
+
+    public float computeVideoBitRate(String videoLocation){
+
+        float bitRate = -1;
+        String command = "ffmpeg -i " + videoLocation + " -hide_banner";
+        ExecuteShellCommand obj = new ExecuteShellCommand();
+        String output = obj.executeCommand(command);
+        if (output != null) {
+            String[] outputParts = output.split(" ");
+            for (int i = 0; i < outputParts.length; i++){
+                if (outputParts[i].contains("bitrate")){
+                    bitRate = Float.parseFloat(outputParts[i+1]);
+                    bitRate = bitRate*1000;
+                    break;
+                }
+            }
+        }
+        return bitRate;
     }
 
     /**

@@ -145,7 +145,7 @@ public class ExampleImpl implements OdlexampleService {
 
         //finally, start monitoring links
         timer = new Timer();
-        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath);
+        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath, Video.getVideoFPS(videoAbsolutePath));
         timer.schedule(monitorLinksTask, 0, 5000);
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
@@ -188,6 +188,10 @@ public class ExampleImpl implements OdlexampleService {
             timer.cancel();
             timer.purge();
         }
+
+     // MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, null, "/home/maxez/Downloads/unforgettable.mp4");
+   //   monitorLinksTask.computeVideoBitRate("/home/maxez/Downloads/unforgettable.mp4");
+
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 
