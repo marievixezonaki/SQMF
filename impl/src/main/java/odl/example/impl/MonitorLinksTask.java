@@ -35,13 +35,15 @@ public class MonitorLinksTask extends TimerTask{
     private String videoAbsolutePath;
     private float videoFPS;
     private static Long lastQoEEstimationTime = 0L;
+    private int videoCase;
 
-    public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac, String videoAbsolutePath, float videoFPS){
+    public MonitorLinksTask(DataBroker db, RpcProviderRegistry rpcProviderRegistry, String srcMac, String videoAbsolutePath, float videoFPS, int videoCase){
         this.db = db;
         this.rpcProviderRegistry = rpcProviderRegistry;
         this.sourceMac = srcMac;
         this.videoAbsolutePath = videoAbsolutePath;
         this.videoFPS = videoFPS;
+        this.videoCase = videoCase;
     }
 
     @Override
@@ -78,7 +80,7 @@ public class MonitorLinksTask extends TimerTask{
             }*/
 
             if (frameRate != -1){
-                pathMOS = Video.estimateQoE(frameRate, BR, packetLoss);
+                pathMOS = Video.estimateQoE(frameRate, BR, packetLoss, videoCase);
             }
 
        //     System.out.println("Total loss is " + packetLoss + "%");

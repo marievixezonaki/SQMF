@@ -63,6 +63,7 @@ public class ExampleImpl implements OdlexampleService {
     public static boolean fastFailover = false;
     public static String applicationType = "";
     private String videoAbsolutePath;
+    private int videoCase = 0;
 
     public ExampleImpl(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
@@ -84,8 +85,14 @@ public class ExampleImpl implements OdlexampleService {
             if (input.getSrcNode() != null && input.getDstNode() != null && input.getQoEThreshold() != null && input.getApplication() != null){
                 srcNode = input.getSrcNode();
                 dstNode = input.getDstNode();
-                Float QoE = Float.parseFloat(input.getQoEThreshold());
-                QoEThreshold = QoE.doubleValue();
+                try {
+                    Float QoE = Float.parseFloat(input.getQoEThreshold());
+                    QoEThreshold = QoE.doubleValue();
+                }
+                catch (NumberFormatException e){
+                    LOG.info("Wrong number format for QoE threshold, try again.");
+                    return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+                }
                 applicationType = input.getApplication().getName();
             }
         }
@@ -100,6 +107,11 @@ public class ExampleImpl implements OdlexampleService {
             dialog.setMode(FileDialog.LOAD);
             dialog.setVisible(true);
             videoAbsolutePath = dialog.getDirectory() + dialog.getFile();
+            videoCase = findVideoCase(videoAbsolutePath);
+            if (videoCase == 0){
+                LOG.info("Video required specifications not met, choose another video.");
+                return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+            }
         }
 
         //first, add rules to ingress and egress nodes to forward their packets to controller
@@ -145,10 +157,37 @@ public class ExampleImpl implements OdlexampleService {
 
         //finally, start monitoring links
         timer = new Timer();
-        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath, Video.getVideoFPS(videoAbsolutePath));
+        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath, Video.getVideoFPS(videoAbsolutePath), videoCase);
         timer.schedule(monitorLinksTask, 0, 5000);
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+    }
+
+    public int findVideoCase(String videoAbsolutePath){
+
+        //check what category video belongs to
+        int keyFrame = Video.getKeyFrame(videoAbsolutePath);
+        String codec = Video.getVideoCodec(videoAbsolutePath);
+        String format = Video.getVideoFormat(videoAbsolutePath);
+        if ((keyFrame == -1) || (codec == null) || (format == null)){
+            return 0;
+        }
+        if ((keyFrame == 1) && codec.equals("h264") && format.equals("640x480")){
+            return 5;
+        }
+        if ((keyFrame == 1) && codec.equals("mpeg4") && format.equals("640x480")){
+            return 4;
+        }
+        if ((keyFrame == 1) && codec.equals("mpeg2") && format.equals("640x480")){
+            return 3;
+        }
+        if ((keyFrame == 1) && codec.equals("mpeg4") && format.equals("160x120")){
+            return 2;
+        }
+        if ((keyFrame == 1) && codec.equals("mpeg4") && format.equals("320x240")){
+            return 1;
+        }
+        return 0;
     }
 
     /**
@@ -188,9 +227,6 @@ public class ExampleImpl implements OdlexampleService {
             timer.cancel();
             timer.purge();
         }
-
-     // MonitorLinksTask monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, null, "/home/maxez/Downloads/unforgettable.mp4");
-   //   monitorLinksTask.computeVideoBitRate("/home/maxez/Downloads/unforgettable.mp4");
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
