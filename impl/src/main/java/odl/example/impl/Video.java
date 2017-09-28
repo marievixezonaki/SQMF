@@ -19,7 +19,7 @@ public class Video {
     public static double estimateQoE(float frameRate, float bitRate, double packetLoss, int videoCase) {
 
         assignCoordinatesValues(videoCase);
-        System.out.println("v1 is " + v1);
+  //      System.out.println("v1 is " + v1);
         double OFr = v1 + v2*bitRate;
         double IOfr = v3 - v3/(1 + (Math.pow(bitRate, v5)/v4));
         double DFrv = v6 + v7*bitRate;

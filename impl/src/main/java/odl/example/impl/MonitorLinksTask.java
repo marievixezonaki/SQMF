@@ -83,12 +83,7 @@ public class MonitorLinksTask extends TimerTask{
                 pathMOS = Video.estimateQoE(frameRate, BR, packetLoss, videoCase);
             }
 
-       //     System.out.println("Total loss is " + packetLoss + "%");
-       //     System.out.println("BitsReceivedCount is " + bitsReceivedCount + " bits");
-       //     System.out.println("Frame rate is " + frameRate + " fps");
-       //     System.out.println("N is " + N);
             System.out.println("FPS is " + frameRate);
-       //     System.out.println("Bitrate is " + bitRate);
             System.out.println("BR is " + BR);
             System.out.println("PLR is " + packetLoss);
 
@@ -99,16 +94,13 @@ public class MonitorLinksTask extends TimerTask{
             System.out.println("MOS is lower than the threshold.");
             if (!isFailover && PacketProcessing.videoHasStarted) {
                 if (!ExampleImpl.fastFailover) {
-                    ExampleImpl.changePath();
+        //            ExampleImpl.changePath();
                 }
             }
             else{
                 System.out.println("Cannot change path although QoE low.");
             }
         }
-    //    else if (pathMOS < 0){
-    //        System.out.println("Something went wrong while computing MOS.");
-     //   }
         System.out.println("-----------------------------------------------------------------------------------------------------");
     }
 
@@ -159,7 +151,7 @@ public class MonitorLinksTask extends TimerTask{
         Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
-        System.out.println("Packets " + currentIngressPackets + " " + currentEgressPackets);
+ //       System.out.println("Packets " + currentIngressPackets + " " + currentEgressPackets);
 
         ingressPackets = PacketProcessing.ingressUdpPackets;
         egressPackets = PacketProcessing.egressUdpPackets;
@@ -178,7 +170,7 @@ public class MonitorLinksTask extends TimerTask{
 
         Integer currentIngressBits = PacketProcessing.ingressBits - ingressBits;
         Integer currentEgressBits = PacketProcessing.egressBits - egressBits;
-        System.out.println("Bits " + currentIngressBits + " " + currentEgressBits);
+ //       System.out.println("Bits " + currentIngressBits + " " + currentEgressBits);
         ingressBits = PacketProcessing.ingressBits;
         egressBits = PacketProcessing.egressBits;
         return currentEgressBits;
