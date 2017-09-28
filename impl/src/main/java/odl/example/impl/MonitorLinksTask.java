@@ -78,7 +78,9 @@ public class MonitorLinksTask extends TimerTask{
          /*   if (bitRate != -1){
                 pathMOS = Video.estimateQoE(frameRate, BR, packetLoss);
             }*/
-
+            if (bitsReceivedCount == 0){
+                BR = 0;
+            }
             if (frameRate != -1){
                 pathMOS = Video.estimateQoE(frameRate, BR, packetLoss, videoCase);
             }
