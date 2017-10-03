@@ -7,6 +7,9 @@
  */
 package odl.example.impl;
 
+import org.apache.commons.lang.StringUtils;
+import org.opendaylight.controller.config.api.jmx.ObjectNameUtil;
+
 public class Video {
 
     private static double v1 = 1.431, v2 = 2.228/100, v3 = 3.759, v4 = 184.1, v5 = 1.161,
@@ -90,6 +93,8 @@ public class Video {
         String[] command = { "ffprobe", "-select_streams", "v:0", "-show_frames", videoLocation, "-hide_banner" };
         ExecuteShellCommand obj = new ExecuteShellCommand();
         String output = obj.executeCommand(command);
+        System.out.println(output);
+
         if (output != null) {
             String[] outputParts = output.split("\\=");
 
@@ -111,6 +116,12 @@ public class Video {
     }
 
     public static String getVideoFormat(String videoLocation){
+
+        int targetTimes = 2;
+        boolean pathContainsX = videoLocation.contains("x");
+        if (pathContainsX){
+            targetTimes++;
+        }
         String videoFormat;
         String command = "ffmpeg -i " + videoLocation + " -hide_banner";
         ExecuteShellCommand obj = new ExecuteShellCommand();
@@ -121,7 +132,7 @@ public class Video {
             for (int i = 0; i < outputParts.length; i++){
                 if (outputParts[i].contains("x")){
                     times++;
-                    if (times == 3){
+                    if (times == targetTimes){
                         String[] codecParts = outputParts[i].split(" ");
                         String format = codecParts[1];
                         String width = format.substring(0, 3);
