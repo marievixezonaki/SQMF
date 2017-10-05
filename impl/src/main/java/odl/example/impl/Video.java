@@ -93,8 +93,6 @@ public class Video {
         String[] command = { "ffprobe", "-select_streams", "v:0", "-show_frames", videoLocation, "-hide_banner" };
         ExecuteShellCommand obj = new ExecuteShellCommand();
         String output = obj.executeCommand(command);
-        System.out.println(output);
-
         if (output != null) {
             String[] outputParts = output.split("\\=");
 

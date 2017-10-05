@@ -24,6 +24,8 @@ public class PacketProcessing implements PacketProcessingListener {
     private final Logger LOG = LoggerFactory.getLogger(PacketProcessing.class);
     public static Integer ingressUdpPackets = 0;
     public static Integer egressUdpPackets = 0;
+    public static Integer totalInPackets = 0;
+    public static Integer totalOutPackets = 0;
     public static Integer ingressBits = 0;
     public static Integer egressBits = 0;
     public String srcNode;
@@ -62,6 +64,7 @@ public class PacketProcessing implements PacketProcessingListener {
                     e.printStackTrace();
                 }
                 ingressUdpPackets++;
+                totalInPackets++;
                 ingressBits += udpPacketSize;
             }
             else if (switchWhichReceivedPacket.equals(dstNode)){
@@ -71,6 +74,7 @@ public class PacketProcessing implements PacketProcessingListener {
                     e.printStackTrace();
                 }
                 egressUdpPackets++;
+                totalOutPackets++;
                 egressBits += udpPacketSize;
             }
         }

@@ -153,7 +153,7 @@ public class MonitorLinksTask extends TimerTask{
         Integer currentIngressPackets = PacketProcessing.ingressUdpPackets - ingressPackets;
         Integer currentEgressPackets = PacketProcessing.egressUdpPackets - egressPackets;
         Integer lostUdpPackets = currentIngressPackets - currentEgressPackets;
- //       System.out.println("Packets " + currentIngressPackets + " " + currentEgressPackets);
+        System.out.println("Packets " + PacketProcessing.totalInPackets + " " + PacketProcessing.totalOutPackets);
 
         ingressPackets = PacketProcessing.ingressUdpPackets;
         egressPackets = PacketProcessing.egressUdpPackets;
