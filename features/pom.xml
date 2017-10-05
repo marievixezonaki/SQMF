@@ -13,8 +13,8 @@ and is available at http://www.eclipse.org/legal/epl-v10.html INTERNAL
     <version>1.7.1-Boron-SR1</version>
     <relativePath/>
   </parent>
-  <groupId>odl.example</groupId>
-  <artifactId>odlexample-features</artifactId>
+  <groupId>sqmf</groupId>
+  <artifactId>sqmf-features</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <name>${project.artifactId}</name>
   <modelVersion>4.0.0</modelVersion>
@@ -113,19 +113,19 @@ and is available at http://www.eclipse.org/legal/epl-v10.html INTERNAL
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>odlexample-impl</artifactId>
+      <artifactId>sqmf-impl</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>odlexample-impl</artifactId>
+      <artifactId>sqmf-impl</artifactId>
       <version>${project.version}</version>
       <type>xml</type>
       <classifier>config</classifier>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>odlexample-api</artifactId>
+      <artifactId>sqmf-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

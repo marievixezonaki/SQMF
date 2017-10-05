@@ -1,27 +1,27 @@
-module odlexample-impl {
+module sqmf-impl {
     yang-version 1;
-    namespace "urn:opendaylight:params:xml:ns:yang:odlexample:impl";
-    prefix "odlexample-impl";
+    namespace "urn:opendaylight:params:xml:ns:yang:sqmf:impl";
+    prefix "sqmf-impl";
 
     import config { prefix config; revision-date 2013-04-05; }
     import opendaylight-md-sal-binding { prefix md-sal-binding; revision-date 2013-10-28;}
 
     description
-        "Service definition for odlexample project";
+        "Service definition for sqmf project";
 
     revision "2014-12-10" {
         description
             "Initial revision";
     }
 
-    identity odlexample {
+    identity sqmf {
         base config:module-type;
-        config:java-name-prefix Example;
+        config:java-name-prefix Sqmf;
     }
 
     augment "/config:modules/config:module/config:configuration" {
-        case odlexample {
-            when "/config:modules/config:module/config:type = 'odlexample'";
+        case sqmf {
+            when "/config:modules/config:module/config:type = 'sqmf'";
             container broker {
                 uses config:service-ref {
                     refine type {

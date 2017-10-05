@@ -17,15 +17,15 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>odl.example</groupId>
-  <artifactId>odlexample-it</artifactId>
+  <groupId>sqmf</groupId>
+  <artifactId>sqmf-it</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <properties>
     <skipITs>false</skipITs>
-    <karaf.distro.groupId>odl.example</karaf.distro.groupId>
-    <karaf.distro.artifactId>odlexample-karaf</karaf.distro.artifactId>
+    <karaf.distro.groupId>sqmf</karaf.distro.groupId>
+    <karaf.distro.artifactId>sqmf-karaf</karaf.distro.artifactId>
     <karaf.distro.version>1.0.0-SNAPSHOT</karaf.distro.version>
     <karaf.distro.type>zip</karaf.distro.type>
   </properties>
@@ -33,7 +33,7 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>odlexample-features</artifactId>
+      <artifactId>sqmf-features</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>

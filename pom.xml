@@ -14,10 +14,10 @@ and is available at http://www.eclipse.org/legal/epl-v10.html INTERNAL
     <relativePath/>
   </parent>
 
-  <groupId>odl.example</groupId>
-  <artifactId>odlexample-aggregator</artifactId>
+  <groupId>sqmf</groupId>
+  <artifactId>sqmf-aggregator</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <name>odlexample</name>
+  <name>sqmf</name>
   <packaging>pom</packaging>
   <modelVersion>4.0.0</modelVersion>
   <prerequisites>

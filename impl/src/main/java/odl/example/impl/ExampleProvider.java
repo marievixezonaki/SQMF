@@ -12,7 +12,8 @@ import org.opendaylight.controller.md.sal.common.api.data.AsyncDataBroker;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.sal.binding.api.*;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker.ProviderContext;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.odlexample.rev150105.*;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.impl.rev141210.*;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev150105.SqmfService;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
@@ -28,7 +29,7 @@ import java.util.Set;
 public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleProvider.class);
-    private BindingAwareBroker.RpcRegistration<OdlexampleService> exampleService;
+    private BindingAwareBroker.RpcRegistration<SqmfService> exampleService;
     private NotificationProviderService notificationService;
     private DataBroker db;
     private RpcProviderRegistry rpcProviderRegistry;
@@ -66,7 +67,7 @@ public class ExampleProvider implements BindingAwareProvider, AutoCloseable {
         }
 */
         //starting the ExampleImpl class
-        exampleService = session.addRpcImplementation(OdlexampleService.class, new ExampleImpl(session, db, rpcProviderRegistry, notificationService));
+        exampleService = session.addRpcImplementation(SqmfService.class, new ExampleImpl(session, db, rpcProviderRegistry, notificationService));
     }
 
     @Override

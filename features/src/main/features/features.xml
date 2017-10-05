@@ -7,7 +7,7 @@ This program and the accompanying materials are made available under the
 terms of the Eclipse Public License v1.0 which accompanies this distribution,
 and is available at http://www.eclipse.org/legal/epl-v10.html
 -->
-<features name="odl-odlexample-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.2.0"
+<features name="odl-sqmf-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.2.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.2.0 http://karaf.apache.org/xmlns/features/v1.2.0">
   <repository>mvn:org.opendaylight.yangtools/features-yangtools/{{VERSION}}/xml/features</repository>
@@ -19,28 +19,28 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
   <repository>mvn:org.opendaylight.l2switch/features-l2switch/${l2switch.version}/xml/features</repository>
 
 
-  <feature name='odl-odlexample-api' version='${project.version}' description='OpenDaylight :: odlexample :: api'>
+  <feature name='odl-sqmf-api' version='${project.version}' description='OpenDaylight :: sqmf :: api'>
     <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
-    <bundle>mvn:odl.example/odlexample-api/{{VERSION}}</bundle>
+    <bundle>mvn:sqmf/sqmf-api/{{VERSION}}</bundle>
   </feature>
-  <feature name='odl-odlexample' version='${project.version}' description='OpenDaylight :: odlexample'>
+  <feature name='odl-sqmf' version='${project.version}' description='OpenDaylight :: sqmf'>
     <feature version='${mdsal.version}'>odl-mdsal-broker</feature>
-    <feature version='${project.version}'>odl-odlexample-api</feature>
+    <feature version='${project.version}'>odl-sqmf-api</feature>
     <feature version='${openflow.plugin.version}'>odl-openflowplugin-southbound</feature>
     <feature version='${openflow.plugin.version}'>odl-openflowplugin-flow-services</feature>
     <feature version="${l2switch.version}">odl-l2switch-all</feature>
     <bundle>mvn:org.opendaylight.controller.thirdparty/net.sf.jung2/2.0.1</bundle>
     <bundle>mvn:org.jgrapht/jgrapht-core/1.0.1</bundle>
-    <bundle>mvn:odl.example/odlexample-impl/{{VERSION}}</bundle>
+    <bundle>mvn:sqmf/sqmf-impl/{{VERSION}}</bundle>
     <configfile finalname="${configfile.directory}/
-    odlexample.xml">mvn:odl.example/odlexample-impl/{{VERSION}}/xml/config</configfile>
+    sqmf.xml">mvn:sqmf/sqmf-impl/{{VERSION}}/xml/config</configfile>
   </feature>
-  <feature name='odl-odlexample-rest' version='${project.version}' description='OpenDaylight :: odlexample :: REST'>
-    <feature version="${project.version}">odl-odlexample</feature>
+  <feature name='odl-sqmf-rest' version='${project.version}' description='OpenDaylight :: sqmf :: REST'>
+    <feature version="${project.version}">odl-sqmf</feature>
     <feature version="${restconf.version}">odl-restconf</feature>
   </feature>
-  <feature name='odl-odlexample-ui' version='${project.version}' description='OpenDaylight :: odlexample :: UI'>
-    <feature version="${project.version}">odl-odlexample-rest</feature>
+  <feature name='odl-sqmf-ui' version='${project.version}' description='OpenDaylight :: sqmf :: UI'>
+    <feature version="${project.version}">odl-sqmf-rest</feature>
     <feature version="${restconf.version}">odl-mdsal-apidocs</feature>
     <feature version="${mdsal.version}">odl-mdsal-xsql</feature>
     <feature version="${dlux.version}">odl-dlux-all</feature>

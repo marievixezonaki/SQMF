@@ -17,8 +17,8 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>odl.example</groupId>
-  <artifactId>odlexample-impl</artifactId>
+  <groupId>sqmf</groupId>
+  <artifactId>sqmf-impl</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
@@ -32,7 +32,7 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>odlexample-api</artifactId>
+      <artifactId>sqmf-api</artifactId>
       <version>${project.version}</version>
     </dependency>
 

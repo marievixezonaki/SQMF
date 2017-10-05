@@ -1,10 +1,10 @@
-module odlexample {
+module sqmf {
     yang-version 1;
-    namespace "urn:opendaylight:params:xml:ns:yang:odlexample";
-    prefix "odlexample";
+    namespace "urn:opendaylight:params:xml:ns:yang:sqmf";
+    prefix "sqmf";
 
     revision "2015-01-05" {
-        description "Initial revision of odlexample model";
+        description "Initial revision of sqmf model";
     }
     
     rpc startFailover {
