@@ -1,0 +1,52 @@
+module sqmf-impl {
+    yang-version 1;
+    namespace "urn:opendaylight:params:xml:ns:yang:sqmf:impl";
+    prefix "sqmf-impl";
+
+    import config { prefix config; revision-date 2013-04-05; }
+    import opendaylight-md-sal-binding { prefix md-sal-binding; revision-date 2013-10-28;}
+
+    description
+        "Service definition for sqmf project";
+
+    revision "2014-12-10" {
+        description
+            "Initial revision";
+    }
+
+    identity sqmf {
+        base config:module-type;
+        config:java-name-prefix sqmf;
+    }
+
+    augment "/config:modules/config:module/config:configuration" {
+        case sqmf {
+            when "/config:modules/config:module/config:type = 'sqmf'";
+            container broker {
+                uses config:service-ref {
+                    refine type {
+                        mandatory true;
+                        config:required-identity md-sal-binding:binding-broker-osgi-registry;
+                    }
+                }
+            }
+            container notification-service {
+                uses config:service-ref {
+                  refine type {
+                    mandatory false;
+                    config:required-identity md-sal-binding:binding-notification-service;
+                  }
+               }
+            }
+            container rpc-registry {
+                uses config:service-ref {
+                    refine type {
+                        mandatory false;
+                        config:required-identity md-sal-binding:binding-rpc-registry;
+                    }
+                }
+            }
+
+        }
+    }
+}

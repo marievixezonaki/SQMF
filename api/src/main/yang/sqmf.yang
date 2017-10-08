@@ -3,7 +3,7 @@ module sqmf {
     namespace "urn:opendaylight:params:xml:ns:yang:sqmf";
     prefix "sqmf";
 
-    revision "2015-01-05" {
+    revision "2014-12-10" {
         description "Initial revision of sqmf model";
     }
     
