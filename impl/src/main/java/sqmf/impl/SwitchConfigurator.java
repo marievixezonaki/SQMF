@@ -393,6 +393,7 @@ public class SwitchConfigurator {
                     .setOrder(1).setAction(new OutputActionCaseBuilder()
                             .setOutputAction(new OutputActionBuilder()
                                     .setOutputNodeConnector(new Uri(backupPort))
+//                                    .setOutputNodeConnector(new Uri(OutputPortValues.INPORT.toString()))
                                     .build())
                             .build())
                     .build();
