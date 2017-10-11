@@ -537,8 +537,6 @@ public class SwitchConfigurator {
     /**
      * The method which creates an instance identifier for a group.
      *
-     * @param switchToConfigure    The switch were the group will be added
-     * @param group                The group to be added
      * @return                     The created instance identifier
      */
     private InstanceIdentifier<Group> createInstanceIdentifierForGroup(String switchToConfigure, Group group){
@@ -552,7 +550,8 @@ public class SwitchConfigurator {
 
     public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
 
-        WriteTransaction transaction = db.newWriteOnlyTransaction();
+        manuallyConfigureIngressAndEgressForTests(ingressSwitch, egressSwitch, inputPorts, outputPorts);
+        /*WriteTransaction transaction = db.newWriteOnlyTransaction();
 
         //create flows for ingress node
         Flow flowForIngressMainPath = createIngressAndEgressFlowForMonitoring(inputPorts.get(ingressSwitch), outputPorts.get(ingressSwitch));
@@ -566,7 +565,7 @@ public class SwitchConfigurator {
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngressMainPath, flowForIngressMainPath, true);
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierEgressMainPath, flowForEgressMainPath, true);
 
-        transaction.submit();
+        transaction.submit();*/
     }
 
     private Flow createIngressAndEgressFlowForMonitoring(Integer inPort, Integer outPort){
@@ -807,8 +806,228 @@ public class SwitchConfigurator {
         transaction.delete(LogicalDatastoreType.CONFIGURATION, flowPath);
         transaction.submit();
     }
-}
 
+    public void manuallyConfigureIngressAndEgressForTests(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
+
+        //create flows for ingress node
+        Flow flowForIngressMainPath = createManualIngressAndEgressFlowForMonitoring(inputPorts.get(ingressSwitch));
+        InstanceIdentifier<Flow> instanceIdentifierIngressMainPath = createInstanceIdentifierForFlow(ingressSwitch, flowForIngressMainPath);
+
+        //create flows for egress node
+        Flow flowForEgressMainPath = createManualIngressAndEgressFlowForMonitoring(inputPorts.get(egressSwitch));
+        InstanceIdentifier<Flow> instanceIdentifierEgressMainPath = createInstanceIdentifierForFlow(egressSwitch, flowForEgressMainPath);
+        Flow extraForEgress = extraFlowEgress(1);
+        InstanceIdentifier<Flow> instanceIdentifierExtraEgress = createInstanceIdentifierForFlow(egressSwitch, extraForEgress);
+
+        //put flows into transaction
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngressMainPath, flowForIngressMainPath, true);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierEgressMainPath, flowForEgressMainPath, true);
+        transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierExtraEgress, extraForEgress, true);
+
+        transaction.submit();
+    }
+
+    private Flow extraFlowEgress(Integer inPort){
+        FlowBuilder flowBuilder = new FlowBuilder()
+                .setTableId((short) 0)
+                .setFlowName("flow" + flowId)
+                .setId(new FlowId(flowId.toString()));
+        flowId++;
+
+        NodeConnectorId inputPort = new NodeConnectorId(inPort.toString());
+
+        Match match = new MatchBuilder()
+             /*   .setEthernetMatch(new EthernetMatchBuilder()
+                        .setEthernetType(new EthernetTypeBuilder()
+                                .setType(new EtherType(IP_ETHERTYPE.longValue()))
+                                .build())
+                        .build())*/
+                .setInPort(inputPort)
+                .build();
+
+        ActionBuilder actionBuilder = new ActionBuilder();
+        List<Action> actions = new ArrayList<Action>();
+
+        //output to controller
+        Action outputToControllerAction = actionBuilder
+                .setOrder(0).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setMaxLength(65535)
+                                .setOutputNodeConnector(new Uri(OutputPortValues.CONTROLLER.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputToControllerAction);
+
+        Integer a = 3, b = 2;
+        Action outputNodeConnectorAction1 = actionBuilder
+                .setOrder(1).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setOutputNodeConnector(new Uri(a.toString()))
+                                .build())
+                        .build())
+                .build();
+        Action outputNodeConnectorAction2 = actionBuilder
+                .setOrder(2).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setOutputNodeConnector(new Uri(b.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputNodeConnectorAction1);
+        actions.add(outputNodeConnectorAction2);
+
+        //ApplyActions
+        ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();
+        List<Instruction> instructions = new ArrayList<>();
+
+        //Instruction for Actions
+        Instruction applyActionsInstruction = new InstructionBuilder()
+                .setOrder(0).setInstruction(new ApplyActionsCaseBuilder()
+                        .setApplyActions(applyActions)
+                        .build())
+                .build();
+
+        instructions.add(applyActionsInstruction);
+
+        //Build all the instructions together, based on the Instructions list
+        Instructions allInstructions = new InstructionsBuilder()
+                .setInstruction(instructions)
+                .build();
+
+        flowBuilder
+                .setMatch(match)
+                .setBufferId(OFConstants.OFP_NO_BUFFER)
+                .setInstructions(allInstructions)
+                .setPriority(1000)
+                .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
+                .setFlags(new FlowModFlags(false, false, false, false, false));
+
+        return flowBuilder.build();
+    }
+
+    private Flow createManualIngressAndEgressFlowForMonitoring(Integer inPort){
+
+        FlowBuilder flowBuilder = new FlowBuilder()
+                .setTableId((short) 0)
+                .setFlowName("flow" + flowId)
+                .setId(new FlowId(flowId.toString()));
+        flowId++;
+
+        NodeConnectorId inputPort = new NodeConnectorId(inPort.toString());
+
+        Match match = new MatchBuilder()
+             /*   .setEthernetMatch(new EthernetMatchBuilder()
+                        .setEthernetType(new EthernetTypeBuilder()
+                                .setType(new EtherType(IP_ETHERTYPE.longValue()))
+                                .build())
+                        .build())*/
+                .setInPort(inputPort)
+                .build();
+
+        ActionBuilder actionBuilder = new ActionBuilder();
+        List<Action> actions = new ArrayList<Action>();
+
+        //output to controller
+        Action outputToControllerAction = actionBuilder
+                .setOrder(0).setAction(new OutputActionCaseBuilder()
+                        .setOutputAction(new OutputActionBuilder()
+                                .setMaxLength(65535)
+                                .setOutputNodeConnector(new Uri(OutputPortValues.CONTROLLER.toString()))
+                                .build())
+                        .build())
+                .build();
+        actions.add(outputToControllerAction);
+
+        if (inPort == 2){
+            Integer a = 3, b = 1;
+            Action outputNodeConnectorAction1 = actionBuilder
+                    .setOrder(1).setAction(new OutputActionCaseBuilder()
+                            .setOutputAction(new OutputActionBuilder()
+                                    .setOutputNodeConnector(new Uri(a.toString()))
+                                    .build())
+                            .build())
+                    .build();
+            Action outputNodeConnectorAction2 = actionBuilder
+                    .setOrder(2).setAction(new OutputActionCaseBuilder()
+                            .setOutputAction(new OutputActionBuilder()
+                                    .setOutputNodeConnector(new Uri(b.toString()))
+                                    .build())
+                            .build())
+                    .build();
+            actions.add(outputNodeConnectorAction1);
+            actions.add(outputNodeConnectorAction2);
+        }
+        else if (inPort == 3){
+            Integer a = 2, b = 1;
+            Action outputNodeConnectorAction1 = actionBuilder
+                    .setOrder(1).setAction(new OutputActionCaseBuilder()
+                            .setOutputAction(new OutputActionBuilder()
+                                    .setOutputNodeConnector(new Uri(a.toString()))
+                                    .build())
+                            .build())
+                    .build();
+            Action outputNodeConnectorAction2 = actionBuilder
+                    .setOrder(2).setAction(new OutputActionCaseBuilder()
+                            .setOutputAction(new OutputActionBuilder()
+                                    .setOutputNodeConnector(new Uri(b.toString()))
+                                    .build())
+                            .build())
+                    .build();
+            actions.add(outputNodeConnectorAction1);
+            actions.add(outputNodeConnectorAction2);
+        }
+        else if (inPort == 1){
+            Integer a = 3, b = 2;
+            Action outputNodeConnectorAction1 = actionBuilder
+                    .setOrder(1).setAction(new OutputActionCaseBuilder()
+                            .setOutputAction(new OutputActionBuilder()
+                                    .setOutputNodeConnector(new Uri(a.toString()))
+                                    .build())
+                            .build())
+                    .build();
+            Action outputNodeConnectorAction2 = actionBuilder
+                    .setOrder(2).setAction(new OutputActionCaseBuilder()
+                            .setOutputAction(new OutputActionBuilder()
+                                    .setOutputNodeConnector(new Uri(b.toString()))
+                                    .build())
+                            .build())
+                    .build();
+            actions.add(outputNodeConnectorAction1);
+            actions.add(outputNodeConnectorAction2);
+        }
+
+        //ApplyActions
+        ApplyActions applyActions = new ApplyActionsBuilder().setAction(actions).build();
+        List<Instruction> instructions = new ArrayList<>();
+
+        //Instruction for Actions
+        Instruction applyActionsInstruction = new InstructionBuilder()
+                .setOrder(0).setInstruction(new ApplyActionsCaseBuilder()
+                        .setApplyActions(applyActions)
+                        .build())
+                .build();
+
+        instructions.add(applyActionsInstruction);
+
+        //Build all the instructions together, based on the Instructions list
+        Instructions allInstructions = new InstructionsBuilder()
+                .setInstruction(instructions)
+                .build();
+
+        flowBuilder
+                .setMatch(match)
+                .setBufferId(OFConstants.OFP_NO_BUFFER)
+                .setInstructions(allInstructions)
+                .setPriority(1000)
+                .setCookie(new FlowCookie(BigInteger.valueOf(flowCookieInc.getAndIncrement())))
+                .setFlags(new FlowModFlags(false, false, false, false, false));
+
+        return flowBuilder.build();
+    }
+
+}
 
 
 
