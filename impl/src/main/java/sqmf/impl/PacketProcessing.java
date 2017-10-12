@@ -67,7 +67,7 @@ public class PacketProcessing implements PacketProcessingListener {
                 totalInPackets++;
                 ingressBits += udpPacketSize;
             }
-            else if (switchWhichReceivedPacket.equals(dstNode) && (Integer.parseInt(matchParts[2]) == 3)){
+            else if (switchWhichReceivedPacket.equals(dstNode) && ((Integer.parseInt(matchParts[2]) == 3)) || (Integer.parseInt(matchParts[2]) == 1)){
                 try {
                     udpPacketSize = decode(packetReceived);
                 } catch (BufferException e) {
