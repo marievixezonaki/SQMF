@@ -68,39 +68,9 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
       <artifactId>jgrapht-core</artifactId>
       <version>1.0.1</version>
     </dependency>
-    <dependency>
-      <groupId>javax.media</groupId>
-      <artifactId>jmf</artifactId>
-      <version>2.1.1e</version>
-    </dependency>
-    <dependency>
-      <groupId>com.abercap</groupId>
-      <artifactId>mediainfo-java-api</artifactId>
-      <version>1.0.0.RELEASE</version>
-    </dependency>
-    <dependency>
-      <groupId>org.bytedeco</groupId>
-      <artifactId>javacv</artifactId>
-      <version>1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>nu.pattern</groupId>
-      <artifactId>opencv</artifactId>
-      <version>2.4.9-4</version>
-    </dependency>
 
     <!-- Testing Dependencies -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
 
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <scope>test</scope>
-    </dependency>
       <dependency>
           <groupId>org.opendaylight.controller</groupId>
           <artifactId>liblldp</artifactId>
@@ -111,10 +81,7 @@ and is available at http://www.eclipse.org/legal/epl-v10.html
           <artifactId>topology-lldp-discovery</artifactId>
           <version>0.4.0-SNAPSHOT</version>
       </dependency>
-      <dependency>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-server</artifactId>
-      </dependency>
+
       <dependency>
           <groupId>org.opendaylight.controller</groupId>
           <artifactId>liblldp</artifactId>

@@ -68,6 +68,7 @@ public class TopologyListener implements DataChangeListener {
             }
             //update the domain graph with the added links
             graphOperations.updateGraph(NetworkGraph.getInstance(), linkList);
+
         }
         if (removedPaths != null && !removedPaths.isEmpty() && originalData != null && !originalData.isEmpty()) {
             linkList = new ArrayList<>();

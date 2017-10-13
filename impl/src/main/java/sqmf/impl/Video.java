@@ -17,7 +17,7 @@ public class Video {
 
     public static double estimateQoE(float frameRate, float bitRate, double packetLoss, int videoCase) {
 
-        assignCoordinatesValues(videoCase);
+        assignCoefficientsValues(videoCase);
   //      System.out.println("v1 is " + v1);
         double OFr = v1 + v2*bitRate;
         double IOfr = v3 - v3/(1 + (Math.pow(bitRate, v5)/v4));
@@ -140,7 +140,7 @@ public class Video {
         return null;
     }
 
-    public static void assignCoordinatesValues(int videoCase){
+    public static void assignCoefficientsValues(int videoCase){
         if (videoCase == 1){
             v1 = 1.431;
             v2 = 0.02228;

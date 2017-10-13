@@ -50,7 +50,7 @@ public class MonitorLinksTask extends TimerTask{
     @Override
     public void run() {
 
-        double pathMOS = -1;
+        double pathQ = -1;
 
         // if application streamed is VoIP
         if (SqmfImplementation.applicationType.equals(VoIP.getName())){
@@ -58,7 +58,7 @@ public class MonitorLinksTask extends TimerTask{
             double packetLoss = monitorPacketLoss();
             System.out.println("Total delay is " + delay + " ms");
             System.out.println("Total loss is " + packetLoss + "%");
-            pathMOS = VoIP.estimateQoE(delay, packetLoss);
+            pathQ = VoIP.estimateQoE(delay, packetLoss);
         }
         // if application streamed is Video
         else if (SqmfImplementation.applicationType.equals(Video.getName())){
@@ -77,13 +77,13 @@ public class MonitorLinksTask extends TimerTask{
                 bitRate = -1L;
             }*/
          /*   if (bitRate != -1){
-                pathMOS = Video.estimateQoE(frameRate, BR, packetLoss);
+                pathQ = Video.estimateQoE(frameRate, BR, packetLoss);
             }*/
             if (bitsReceivedCount == 0){
                 BR = 0;
             }
             if (frameRate != -1){
-                pathMOS = Video.estimateQoE(frameRate, BR, packetLoss, videoCase);
+                pathQ = Video.estimateQoE(frameRate, BR, packetLoss, videoCase);
             }
 
             System.out.println("FPS is " + frameRate);
@@ -92,12 +92,15 @@ public class MonitorLinksTask extends TimerTask{
 
         }
 
-        System.out.println("MOS is " + pathMOS);
-        if ( linkFailure || ((pathMOS >= 0) && (pathMOS < SqmfImplementation.QoEThreshold)) ) {
+        System.out.println("QoE is " + pathQ);
+        if ( linkFailure || ((pathQ >= 0) && (pathQ < SqmfImplementation.QoEThreshold)) ) {
             System.out.println("MOS is lower than the threshold.");
             if (!isFailover && PacketProcessing.videoHasStarted) {
                 if (!SqmfImplementation.fastFailover) {
-        //            ExampleImpl.changePath();
+                    /* CRUCIAL LINE : comment in order to just monitor without making corrective
+                    *  actions, uncomment in order to implement QoE-based forwarding
+                    */
+//                    SqmfImplementation.changePath();
                 }
             }
             else{
@@ -141,7 +144,6 @@ public class MonitorLinksTask extends TimerTask{
     }
 
     private void findNextNodeConnector(List<DomainLink> linkList){
-
         int i = 0;
         for (DomainLink domainLink : linkList){
             if (i <= (linkList.size()-1)){
@@ -170,7 +172,6 @@ public class MonitorLinksTask extends TimerTask{
     }
 
     private int findBits(){
-
         Integer currentIngressBits = PacketProcessing.ingressBits - ingressBits;
         Integer currentEgressBits = PacketProcessing.egressBits - egressBits;
  //       System.out.println("Bits " + currentIngressBits + " " + currentEgressBits);
@@ -229,34 +230,6 @@ public class MonitorLinksTask extends TimerTask{
             totalDelay += delay;
         }
         return totalDelay;
-    }
-
-    public float computeVideoFPS(String videoLocation){
-
-        float frameRate;
-        System.out.println("Computing fps");
-
-        String command = "ffmpeg -i " + videoLocation + " -hide_banner";
-  //      System.out.println(command);
-        ExecuteShellCommand obj = new ExecuteShellCommand();
-        String output = obj.executeCommand(command);
-        if (output != null) {
-     //       System.out.println(output);
-            String[] outputParts = output.split(",");
-            for (int i = 0; i < outputParts.length; i++){
-                if (outputParts[i].contains("fps")){
-                    String fps = outputParts[i];
-                    String[] fpsParts = fps.split(" ");
-                    if (fpsParts.length > 2){
-                        frameRate = Float.parseFloat(fpsParts[1]);
-                        System.out.println(frameRate);
-                        return frameRate;
-                    }
-                    break;
-                }
-            }
-        }
-        return -1;
     }
 
 }
