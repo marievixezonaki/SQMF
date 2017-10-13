@@ -31,7 +31,7 @@ public class LatencyMonitor {
         latency = -1L;
         String nodeConnectorId = link.getSource().getSourceTp().getValue();
         String nodeId = link.getSource().getSourceNode().getValue();
-        packetSender.sendPacket(0, nodeConnectorId, nodeId, srcMac, nextNodeConnector);
+        packetSender.sendPacket(nodeConnectorId, nodeId, srcMac, nextNodeConnector);
         while(latency == -1) {
         }
         return latency;
