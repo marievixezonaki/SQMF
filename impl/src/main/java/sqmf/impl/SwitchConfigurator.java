@@ -550,8 +550,8 @@ public class SwitchConfigurator {
 
     public void configureIngressAndEgressForMonitoring(String ingressSwitch, String egressSwitch, HashMap<String, Integer> inputPorts, HashMap<String, Integer> outputPorts){
 
-        manuallyConfigureIngressAndEgressForTests(ingressSwitch, egressSwitch, inputPorts, outputPorts);
-        /*WriteTransaction transaction = db.newWriteOnlyTransaction();
+      //  manuallyConfigureIngressAndEgressForTests(ingressSwitch, egressSwitch, inputPorts, outputPorts);
+        WriteTransaction transaction = db.newWriteOnlyTransaction();
 
         //create flows for ingress node
         Flow flowForIngressMainPath = createIngressAndEgressFlowForMonitoring(inputPorts.get(ingressSwitch), outputPorts.get(ingressSwitch));
@@ -565,7 +565,7 @@ public class SwitchConfigurator {
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierIngressMainPath, flowForIngressMainPath, true);
         transaction.put(LogicalDatastoreType.CONFIGURATION, instanceIdentifierEgressMainPath, flowForEgressMainPath, true);
 
-        transaction.submit();*/
+        transaction.submit();
     }
 
     private Flow createIngressAndEgressFlowForMonitoring(Integer inPort, Integer outPort){

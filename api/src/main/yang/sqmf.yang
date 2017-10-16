@@ -7,7 +7,7 @@ module sqmf {
         description "Initial revision of sqmf model";
     }
     
-    rpc startFailover {
+ /*   rpc startFailover {
         input{
             leaf srcNode {
                 type string;
@@ -16,7 +16,7 @@ module sqmf {
                 type string;
             }
         }
-    }
+    }*/
 
     typedef ApplicationType {
         type enumeration {

@@ -93,14 +93,14 @@ public class MonitorLinksTask extends TimerTask{
         }
 
         System.out.println("QoE is " + pathQ);
-        if ( linkFailure || ((pathQ >= 0) && (pathQ < SqmfImplementation.QoEThreshold)) ) {
+        if ( /*linkFailure ||*/ ((pathQ >= 0) && (pathQ < SqmfImplementation.QoEThreshold)) ) {
             System.out.println("MOS is lower than the threshold.");
             if (!isFailover && PacketProcessing.videoHasStarted) {
                 if (!SqmfImplementation.fastFailover) {
                     /* CRUCIAL LINE : comment in order to just monitor without making corrective
                     *  actions, uncomment in order to implement QoE-based forwarding
                     */
-//                    SqmfImplementation.changePath();
+                    SqmfImplementation.changePath();
                 }
             }
             else{
@@ -122,7 +122,7 @@ public class MonitorLinksTask extends TimerTask{
             findNextNodeConnector(linkList);
             for (DomainLink link : linkList) {
                 if (!NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())){
-                    System.out.println("A link in the path is down.");
+                 //   System.out.println("A link in the path is down.");
                     linkFailure = true;
                 }
                 if (!link.getLink().getLinkId().getValue().contains("host") && NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())) {

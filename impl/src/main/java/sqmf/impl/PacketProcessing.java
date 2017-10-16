@@ -57,7 +57,7 @@ public class PacketProcessing implements PacketProcessingListener {
             Match match = packetReceived.getMatch();
             String[] matchParts = match.getInPort().getValue().split(":");
             String switchWhichReceivedPacket = matchParts[0].concat(":").concat(matchParts[1]);
-            if (switchWhichReceivedPacket.equals(srcNode) && (Integer.parseInt(matchParts[2]) == 2)){
+            if (switchWhichReceivedPacket.equals(srcNode) /*&& (Integer.parseInt(matchParts[2]) == 2)*/){
                 try {
                     udpPacketSize = decode(packetReceived);
                 } catch (BufferException e) {
@@ -67,7 +67,7 @@ public class PacketProcessing implements PacketProcessingListener {
                 totalInPackets++;
                 ingressBits += udpPacketSize;
             }
-            else if (switchWhichReceivedPacket.equals(dstNode) && ((Integer.parseInt(matchParts[2]) == 3)) /*|| (Integer.parseInt(matchParts[2]) == 1)*/){
+            else if (switchWhichReceivedPacket.equals(dstNode) /*&& ((Integer.parseInt(matchParts[2]) == 3)) *//*|| (Integer.parseInt(matchParts[2]) == 1)*/){
                 try {
                     udpPacketSize = decode(packetReceived);
                 } catch (BufferException e) {

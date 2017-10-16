@@ -22,7 +22,7 @@ import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.SqmfService;
 //import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
+//import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartMonitoringLinksInput;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
@@ -243,7 +243,7 @@ public class SqmfImplementation implements SqmfService {
      * @param input     The user input, defining the two nodes between which a path will be established for traffic transmission.
      * @return          It returns a void future result.
      */
-    @Override
+/*    @Override
     public Future<RpcResult<Void>> startFailover(StartFailoverInput input) {
         fastFailover = true;
         LOG.info("Configuring switches for resilience.");
@@ -273,7 +273,7 @@ public class SqmfImplementation implements SqmfService {
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
 
-    }
+    }*/
 
     /**
      * The method which implements the resilience. For each node of the main path, finds an alternative port (to send
