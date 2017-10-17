@@ -1,16 +1,25 @@
+# SQMF
+*SQMF* is an SDN QoE Monitoring Framework for VoIP and video applications.
+
+## How to use SQMF?
+
 In order to run this project :
 
-1) Clone the project using the command :
+# 1) Clone the project using the command :
 
-    git clone https://github.com/mari-evi/thesis
+    git clone https://github.com/marievixezonaki/SQMF
     
-2) Browse into the project directory (cd thesis/) and build it :
+# 2) Browse into the project directory (cd SQMF/) and build it with :
 
-    mvn clean install -DskipTests
+    mvn clean install -DskipTests -Dcheckstyle.skip
     
-3) After the build has succeeded, browse cd karaf/target/assembly/bin and execute ./karaf . 
+# 3) After the build has succeeded :
 
-4) Using Mininet, open a network topology. For this project, the topology was created with the following script (thesis.py):
+     Browse cd karaf/target/assembly/bin and execute ./karaf . 
+
+# 4) Using Mininet, open a network topology. F
+
+    For this project, the topology was created with the following script (thesis.py):
 
 
         from mininet.topo import Topo
@@ -62,7 +71,15 @@ In order to run this project :
         sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
 
 
-5) pingall in Mininet.
+# 5) pingall in Mininet.
 
-6) Open the ODL DLUX from the link http://localhost:8181/index.html#/ and select the YANG UI tab at the left sidebar.
-From there, select odlexample-->operations and then the RPC you want to use.
+# 6) Open the ODL DLUX user interface. 
+
+This can be done by typing the URL http://localhost:8181/index.html#/. There, select the YANG UI tab at the left sidebar
+and next choose *sqmf-->operations-->startMonitoringLinks*.
+
+To stop the monitoring, select *sqmf-->operations-->stopMonitoringLinks*.
+
+---
+
+SQMF periodically monitors the QoE in VoIP and video applications, and changes the transmission path if QoE is detected to be lower than a user-specified threshold.
