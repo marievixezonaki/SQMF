@@ -1,23 +1,23 @@
-# SQMF
+### SQMF
 *SQMF* is an SDN QoE Monitoring Framework for VoIP and video applications.
 
-## How to use SQMF?
+### How to use SQMF?
 
 In order to run this project :
 
-# 1) Clone the project using the command :
+### 1) Clone the project using the command :
 
     git clone https://github.com/marievixezonaki/SQMF
     
-# 2) Browse into the project directory (cd SQMF/) and build it with :
+### 2) Browse into the project directory (cd SQMF/) and build it with :
 
     mvn clean install -DskipTests -Dcheckstyle.skip
     
-# 3) After the build has succeeded :
+### 3) After the build has succeeded :
 
      Browse cd karaf/target/assembly/bin and execute ./karaf . 
 
-# 4) Using Mininet, open a network topology. F
+### 4) Using Mininet, open a network topology.
 
     For this project, the topology was created with the following script (thesis.py):
 
@@ -71,9 +71,9 @@ In order to run this project :
         sudo mn --custom thesis.py --topo mytopo --controller=remote,ip=10.124.83.197
 
 
-# 5) pingall in Mininet.
+### 5) pingall in Mininet.
 
-# 6) Open the ODL DLUX user interface. 
+### 6) Open the ODL DLUX user interface. 
 
 This can be done by typing the URL http://localhost:8181/index.html#/. There, select the YANG UI tab at the left sidebar
 and next choose *sqmf-->operations-->startMonitoringLinks*.
