@@ -5,38 +5,66 @@
  */
 package sqmf.impl;
 
+/**
+ * The class simulating video application type.
+ *
+ * @author Marievi Xezonaki
+ */
 public class Video {
 
     private static double v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12;
 
+
+
+    /**
+     * The method which returns the application type's name (video).
+     *
+     * @return      The application type's name.
+     */
     public static String getName(){
         return "Video";
     }
 
+
+
+    /**
+     * The method which computes the QoE for video applications.
+     *
+     * @param frameRate     The video's frame rate (FPS - frames/sec).
+     * @param bitRate       The video's bit rate (bits/sec).
+     * @param packetLoss    The computed packet loss (%).
+     * @param videoCase     The number of the video cases (1-5) where the examined video belongs.
+     *                          * Case 1 : keyFrame = 1, codec = mpeg4, format = 320x240 (QQVGA)
+                                * Case 2 : keyFrame = 1, codec = mpeg4, format = 160x120 (QVGA)
+                                * Case 3 : keyFrame = 1, codec = mpeg2, format = 640x480 (VGA)
+                                * Case 4 : keyFrame = 1, codec = mpeg4, format = 640x480 (VGA)
+                                * Case 5 : keyFrame = 1, codec = h264, format = 640x480 (VGA)
+     *
+     * @return              The computed QoE value.
+     */
     public static double estimateQoE(float frameRate, float bitRate, double packetLoss, int videoCase) {
 
         assignCoefficientsValues(videoCase);
-  //      System.out.println("v1 is " + v1);
         double OFr = v1 + v2*bitRate;
         double IOfr = v3 - v3/(1 + (Math.pow(bitRate, v5)/v4));
         double DFrv = v6 + v7*bitRate;
         double DPplV = v10 + v11*Math.exp(-frameRate/v8) + v12*Math.exp(-bitRate/v9);
 
-      //  System.out.println("OFr " + OFr);
-     //   System.out.println("IOfr " + IOfr);
-    //    System.out.println("DFrv " + DFrv);
-    //    System.out.println("DPplV " + DPplV);
-
         double numeratorIcoding = -Math.pow((Math.log(frameRate)-Math.log(OFr)), 2);
         double denominatorIcoding = 2*Math.pow(DFrv, 2);
         double Icoding = IOfr*Math.exp(numeratorIcoding/denominatorIcoding);
         double Itransmission = Math.exp(-(packetLoss/DPplV));
-      //  System.out.println("Icoding " + Icoding);
-      //  System.out.println("Itransmission " + Itransmission);
-        double MOS = 1 + Icoding*Itransmission;
-        return MOS;
+        double Vq = 1 + Icoding*Itransmission;
+        return Vq;
     }
 
+
+
+    /**
+     * The method which computes video's codec.
+     *
+     * @param videoLocation     The video's absolute path in the file system.
+     */
     public static String getVideoCodec(String videoLocation){
         String videoCodec;
         String command = "ffmpeg -i " + videoLocation + " -hide_banner";
@@ -59,6 +87,13 @@ public class Video {
         return null;
     }
 
+
+
+    /**
+     * The method which computes video's frame rate.
+     *
+     * @param videoLocation     The video's absolute path in the file system.
+     */
     public static float getVideoFPS(String videoLocation){
         float frameRate;
         String command = "ffmpeg -i " + videoLocation + " -hide_banner";
@@ -82,6 +117,13 @@ public class Video {
         return -1;
     }
 
+
+
+    /**
+     * The method which computes video's key frame interval.
+     *
+     * @param videoLocation     The video's absolute path in the file system.
+     */
     public static int getKeyFrame(String videoLocation){
         int keyFrame;
         String[] command = { "ffprobe", "-select_streams", "v:0", "-show_frames", videoLocation, "-hide_banner" };
@@ -107,6 +149,13 @@ public class Video {
         return -1;
     }
 
+
+
+    /**
+     * The method which computes video's format.
+     *
+     * @param videoLocation     The video's absolute path in the file system.
+     */
     public static String getVideoFormat(String videoLocation){
 
         int targetTimes = 2;
@@ -138,6 +187,19 @@ public class Video {
         return null;
     }
 
+
+
+    /**
+     * The method which assigns values to coefficients v1-v12 needed for the video QoE estimation formula, according
+     * to the case (1-5) the video belongs to.
+     * Case 1 : keyFrame = 1, codec = mpeg4, format = 320x240 (QQVGA)
+     * Case 2 : keyFrame = 1, codec = mpeg4, format = 160x120 (QVGA)
+     * Case 3 : keyFrame = 1, codec = mpeg2, format = 640x480 (VGA)
+     * Case 4 : keyFrame = 1, codec = mpeg4, format = 640x480 (VGA)
+     * Case 5 : keyFrame = 1, codec = h264, format = 640x480 (VGA)
+     *
+     * @param videoCase     The number of the video cases (1-5) where the examined video belongs.
+     */
     public static void assignCoefficientsValues(int videoCase){
         if (videoCase == 1){
             v1 = 1.431;

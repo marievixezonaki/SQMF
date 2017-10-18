@@ -5,55 +5,52 @@
  */
 package sqmf.impl;
 
-import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.Futures;
 import edu.uci.ics.jung.algorithms.shortestpath.DijkstraShortestPath;
 import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.KShortestPaths;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
 import org.opendaylight.controller.sal.binding.api.NotificationProviderService;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.SqmfService;
-//import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
-//import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartMonitoringLinksInput;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcResult;
 import org.opendaylight.yangtools.yang.common.RpcResultBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.nio.ch.Net;
-
 import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.Future;
+//import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
+//import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
+import sun.nio.ch.Net;
+import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
+import com.google.common.util.concurrent.CheckedFuture;
 
 /**
  * The core class of the implementation.
  *
+ * @author Marievi Xezonaki
  */
 public class SqmfImplementation implements SqmfService {
 
     private static final Logger LOG = LoggerFactory.getLogger(SqmfImplementation.class);
-    private DijkstraShortestPath<NodeId, Link> shortestPath = null;
-    private BindingAwareBroker.ProviderContext session;
+
     private static HashMap<String, Integer> inputPorts = new HashMap<>();
     private static HashMap<String, Integer> outputPorts = new HashMap<>();
     private static HashMap<String, Integer> failoverPorts = new HashMap<>();
-    private static HashMap<String, Integer> inputPortsFailover = new HashMap<>();
-    private static HashMap<String, Integer> outputPortsFailover = new HashMap<>();
     private static DataBroker db;
     private static String srcMacForDelayMeasuring = "00:00:00:00:00:09";
     public static String srcNode = null;
@@ -68,13 +65,26 @@ public class SqmfImplementation implements SqmfService {
     public static String applicationType = "";
     private String videoAbsolutePath;
     private int videoCase = 0;
+    private static HashMap<String, Integer> inputPortsFailover = new HashMap<>();
+    private static HashMap<String, Integer> outputPortsFailover = new HashMap<>();
+    private DijkstraShortestPath<NodeId, Link> shortestPath = null;
+    private BindingAwareBroker.ProviderContext session;
 
+
+
+    /**
+     * The constructor method.
+     *
+     */
     public SqmfImplementation(BindingAwareBroker.ProviderContext session, DataBroker db, RpcProviderRegistry rpcProviderRegistry, NotificationProviderService notificationService) {
         this.db = db;
         this.session = session;
         this.rpcProviderRegistry = rpcProviderRegistry;
         this.notificationService = notificationService;
     }
+
+
+
 
     /**
      * The method which starts monitoring the packet loss and delay of links, when the user asks it.
@@ -167,6 +177,14 @@ public class SqmfImplementation implements SqmfService {
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
 
+
+
+    /**
+     * The method which initializes the failover procedure.
+     *
+     * @param videoAbsolutePath     The video's absolute path in the file system.
+     * @return                      An integer denoting the video characteristics case.
+     */
     public int findVideoCase(String videoAbsolutePath){
 
         //check what category video belongs to
@@ -194,6 +212,9 @@ public class SqmfImplementation implements SqmfService {
         return 0;
     }
 
+
+
+
     /**
      * The method which changes the main with the failover path in case the QoE threshold is not met. This way,
      * packets start being forwarded to the failover path for better QoE.
@@ -217,6 +238,9 @@ public class SqmfImplementation implements SqmfService {
 
     }
 
+
+
+
     /**
      * The method which stops the timer task monitoring the links.
      *
@@ -234,6 +258,9 @@ public class SqmfImplementation implements SqmfService {
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
     }
+
+
+
 
     /**
      * The method which checks if both given nodes are edge nodes.
@@ -265,6 +292,9 @@ public class SqmfImplementation implements SqmfService {
         }
     }
 
+
+
+
     /**
      * The method which creates the two shortest paths between the two given nodes.
      *
@@ -284,6 +314,9 @@ public class SqmfImplementation implements SqmfService {
             return null;
         }
     }
+
+
+
 
     /**
      * The method which determines the input port for the ingress path node (source) and the output port for the egress
@@ -325,6 +358,9 @@ public class SqmfImplementation implements SqmfService {
         }
     }
 
+
+
+
     /**
      * The method which determines the input and output ports for the core nodes of the main path, as well as the input port
      * for the egress (destination) switch and the output port for the ingress (source) switch.
@@ -347,20 +383,7 @@ public class SqmfImplementation implements SqmfService {
         }
     }
 
-    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) throws ReadFailedException {
-        List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = new ArrayList<>();
-        InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(
-                Nodes.class).build();
-        ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
-        CheckedFuture<com.google.common.base.Optional<Nodes>, ReadFailedException> nodesFuture = nodesTransaction
-                .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
-        com.google.common.base.Optional<Nodes> nodesOptional = nodesFuture.checkedGet();
 
-        if (nodesOptional != null && nodesOptional.isPresent()) {
-            nodeList = nodesOptional.get().getNode();
-        }
-        return nodeList;
-    }
 
     // --------------------------------------   FAST FAILOVER METHODS ---------------------------------------
     /**
@@ -443,6 +466,12 @@ public class SqmfImplementation implements SqmfService {
         }
     }*/
 
+    /**
+     * The method which gets all links from MD-SAL.
+     *
+     * @param db        The data broker.
+     * @return          The links list.
+     */
    /* public static List<Link> getAllLinks(DataBroker db) {
         List<Link> linkList = new ArrayList<>();
 
@@ -465,5 +494,27 @@ public class SqmfImplementation implements SqmfService {
             return linkList;
         }
     }*/
+
+    /**
+     * The method which gets all nodes from MD-SAL.
+     *
+     * @param db        The data broker.
+     * @return          The nodes list.
+     */
+   /* public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) throws ReadFailedException {
+        List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = new ArrayList<>();
+        InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(
+                Nodes.class).build();
+        ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
+        CheckedFuture<com.google.common.base.Optional<Nodes>, ReadFailedException> nodesFuture = nodesTransaction
+                .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
+        com.google.common.base.Optional<Nodes> nodesOptional = nodesFuture.checkedGet();
+
+        if (nodesOptional != null && nodesOptional.isPresent()) {
+            nodeList = nodesOptional.get().getNode();
+        }
+        return nodeList;
+    }*/
+
 
 }

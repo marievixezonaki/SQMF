@@ -9,8 +9,18 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+/**
+ * The class containing the necessary methods to execute a shell command in Java.
+ *
+ */
 public class ExecuteShellCommand {
 
+    /**
+     * The method which executes a shell command from the Java code.
+     *
+     * @param command       The command to be executed.
+     * @return              The command execution's output.
+     */
     public String executeCommand(String command) {
 
         StringBuffer output = new StringBuffer();
@@ -35,15 +45,22 @@ public class ExecuteShellCommand {
 
     }
 
+
+
+
+    /**
+     * Alternative method which executes a shell command from the Java code.
+     *
+     * @param command       The command to be executed.
+     * @return              The command execution's output.
+     */
     public String executeCommand(String[] command) {
 
         StringBuilder output = new StringBuilder();
 
         try {
             ProcessBuilder builder = new ProcessBuilder(command);
-            // Share standard input/output/error descriptors with Java process...
             builder.inheritIO();
-            // ... except standard output, so we can read it with getInputStream().
             builder.redirectOutput(ProcessBuilder.Redirect.PIPE);
 
             Process p = builder.start();

@@ -23,6 +23,12 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
+/**
+ * The class initializing the application.
+ *
+ * @author Marievi Xezonaki
+ */
 public class SqmfProvider implements BindingAwareProvider, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(SqmfProvider.class);
@@ -31,11 +37,12 @@ public class SqmfProvider implements BindingAwareProvider, AutoCloseable {
     private DataBroker db;
     private RpcProviderRegistry rpcProviderRegistry;
 
-    public SqmfProvider(){
-        this.notificationService = notificationService;
-    //    this.rpcProviderRegistry = rpcProviderRegistry;
-        this.db = db;
-    }
+
+    /**
+     * The constructor method.
+     *
+     */
+    public SqmfProvider(){}
 
     @Override
     public void onSessionInitiated(ProviderContext session) {
@@ -52,24 +59,13 @@ public class SqmfProvider implements BindingAwareProvider, AutoCloseable {
                 new TopologyListener(db, notificationService),
                 AsyncDataBroker.DataChangeScope.BASE);
         LOG.info("Topology Listener set");
-  /*      PacketProcessing packetProcessingListener = new PacketProcessing();
-
-   //     this.notificationService.registerNotificationListener(packetProcessingListener);
-        if (notificationService != null) {
-            notificationService.registerNotificationListener(packetProcessingListener);
-            System.out.println("Registered packet processing listener");
-        }
-        else{
-            System.out.println("null");
-        }
-*/
-        //starting the ExampleImpl class
+        //starting the SqmfImplementation class
         exampleService = session.addRpcImplementation(SqmfService.class, new SqmfImplementation(session, db, rpcProviderRegistry, notificationService));
     }
 
     @Override
     public void close() throws Exception {
-        LOG.info("ExampleProvider Closed");
+        LOG.info("SqmfProvider Closed");
     }
 
 }

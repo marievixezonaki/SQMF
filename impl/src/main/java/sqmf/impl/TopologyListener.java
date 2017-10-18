@@ -14,7 +14,6 @@ import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,13 +31,26 @@ public class TopologyListener implements DataChangeListener {
     private final DataBroker dataBroker;
     GraphOperations graphOperations = new GraphOperations();
 
+
+
+    /**
+     * The constructor method.
+     *
+     * @param dataBroker                The data broker which gives access to MD-SAL.
+     * @param notificationService       The notification service which listens for change notifications.
+     */
     public TopologyListener(DataBroker dataBroker, NotificationProviderService notificationService) {
         this.dataBroker = dataBroker;
         this.notificationService = notificationService;
     }
 
+
+
+
     /**
      * The method which detects the topology changes.
+     *
+     * @param dataChangeEvent   The data changed by the event detected.
      */
     @Override
     public void onDataChanged(AsyncDataChangeEvent<InstanceIdentifier<?>, DataObject> dataChangeEvent) {

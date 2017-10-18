@@ -5,12 +5,34 @@
  */
 package sqmf.impl;
 
+/**
+ * The class simulating VoIP application type.
+ *
+ * @author Marievi Xezonaki
+ */
 public class VoIP {
 
+
+
+    /**
+     * The method which returns the application type's name (VoIP).
+     *
+     * @return      The application type's name.
+     */
     public static String getName(){
         return "VoIP";
     }
 
+
+
+
+    /**
+     * The method which computes the QoE for VoIP applications.
+     *
+     * @param delay         The computed delay (msec).
+     * @param packetLoss    The computed packet loss (%).
+     * @return              The computed QoE value.
+     */
     public static double estimateQoE(Long delay, double packetLoss) {
         int h;
         if (delay - 177.3 > 0){
