@@ -236,86 +236,6 @@ public class SqmfImplementation implements SqmfService {
     }
 
     /**
-     * The method which initializes the failover procedure.
-     *
-     * @param input     The user input, defining the two nodes between which a path will be established for traffic transmission.
-     * @return          It returns a void future result.
-     */
-/*    @Override
-    public Future<RpcResult<Void>> startFailover(StartFailoverInput input) {
-        fastFailover = true;
-        LOG.info("Configuring switches for resilience.");
-
-        if (input.getSrcNode() != null && input.getDstNode() != null) {
-            srcNode = input.getSrcNode();
-            dstNode = input.getDstNode();
-        }
-        Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-        DomainNode sourceNode = domainNodes.get(srcNode);
-        DomainNode destNode = domainNodes.get(dstNode);
-
-        //check if the given switches are edge switches, therefore connected to hosts
-        if (!checkIfEdgeSwitches(sourceNode, destNode)){
-            LOG.info("Not edge switches given, returning...");
-            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
-        }
-
-        //create the two best paths (minimum number of hops) between the given switches
-        List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-        if (possiblePaths.size() < 2){
-            LOG.info("There is no backup path between given switches, resilience cannot be achieved. Returning...");
-            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
-        }
-        //configure the switches of the main path beforehand
-        implementFailover();
-
-        return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
-
-    }*/
-
-    /**
-     * The method which implements the resilience. For each node of the main path, finds an alternative port (to send
-     * the packet back to the ingress switch in case of a link failure) and configures the nodes before traffic generation.
-     */
-    public static void implementFailover(){
-        if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
-            Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
-            DomainNode sourceNode = domainNodes.get(srcNode);
-            DomainNode destNode = domainNodes.get(dstNode);
-
-            List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
-            //if there are two paths available, the first will be the main path and the second the backup path
-            if (possiblePaths.size() > 1){
-                GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
-                GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
-
-                //find ports for nodes of main path
-                findPorts(mainPath, sourceNode, destNode);
-
-                //find failover ports for nodes of main path
-                for (DomainLink link : mainPath.getEdgeList()){
-                    failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
-                }
-                failoverPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(failoverPath.getEdgeList().get(0).getLink().getSource().getSourceTp().getValue().split(":")[2]));
-
-                //find in and out ports for nodes of failover path
-                for (DomainLink link : failoverPath.getEdgeList()){
-                    inputPortsFailover.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
-                    outputPortsFailover.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
-
-                }
-                inputPortsFailover.put(sourceNode.getODLNodeID(), inputPorts.get(sourceNode.getODLNodeID()));
-                outputPortsFailover.put(destNode.getODLNodeID(), outputPorts.get(destNode.getODLNodeID()));
-
-                //configure the switches of both main and failover path
-                SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
-                switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
-                switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
-            }
-        }
-    }
-
-    /**
      * The method which checks if both given nodes are edge nodes.
      *
      * @param sourceNode    The source node given by the user.
@@ -427,7 +347,103 @@ public class SqmfImplementation implements SqmfService {
         }
     }
 
-    public static List<Link> getAllLinks(DataBroker db) {
+    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) throws ReadFailedException {
+        List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = new ArrayList<>();
+        InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(
+                Nodes.class).build();
+        ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
+        CheckedFuture<com.google.common.base.Optional<Nodes>, ReadFailedException> nodesFuture = nodesTransaction
+                .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
+        com.google.common.base.Optional<Nodes> nodesOptional = nodesFuture.checkedGet();
+
+        if (nodesOptional != null && nodesOptional.isPresent()) {
+            nodeList = nodesOptional.get().getNode();
+        }
+        return nodeList;
+    }
+
+    // --------------------------------------   FAST FAILOVER METHODS ---------------------------------------
+    /**
+     * The method which initializes the failover procedure.
+     *
+     * @param input     The user input, defining the two nodes between which a path will be established for traffic transmission.
+     * @return          It returns a void future result.
+     */
+/*    @Override
+    public Future<RpcResult<Void>> startFailover(StartFailoverInput input) {
+        fastFailover = true;
+        LOG.info("Configuring switches for resilience.");
+
+        if (input.getSrcNode() != null && input.getDstNode() != null) {
+            srcNode = input.getSrcNode();
+            dstNode = input.getDstNode();
+        }
+        Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+        DomainNode sourceNode = domainNodes.get(srcNode);
+        DomainNode destNode = domainNodes.get(dstNode);
+
+        //check if the given switches are edge switches, therefore connected to hosts
+        if (!checkIfEdgeSwitches(sourceNode, destNode)){
+            LOG.info("Not edge switches given, returning...");
+            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+        }
+
+        //create the two best paths (minimum number of hops) between the given switches
+        List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+        if (possiblePaths.size() < 2){
+            LOG.info("There is no backup path between given switches, resilience cannot be achieved. Returning...");
+            return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+        }
+        //configure the switches of the main path beforehand
+        implementFailover();
+
+        return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
+
+    }*/
+
+    /**
+     * The method which implements the resilience. For each node of the main path, finds an alternative port (to send
+     * the packet back to the ingress switch in case of a link failure) and configures the nodes before traffic generation.
+     */
+  /*  public static void implementFailover(){
+        if (NetworkGraph.getInstance().getGraphNodes() != null && NetworkGraph.getInstance().getGraphLinks() != null) {
+            Hashtable<String, DomainNode> domainNodes = NetworkGraph.getInstance().getDomainNodes();
+            DomainNode sourceNode = domainNodes.get(srcNode);
+            DomainNode destNode = domainNodes.get(dstNode);
+
+            List<GraphPath<Integer, DomainLink>> possiblePaths = createPaths(NetworkGraph.getInstance(), sourceNode.getNodeID(), destNode.getNodeID());
+            //if there are two paths available, the first will be the main path and the second the backup path
+            if (possiblePaths.size() > 1){
+                GraphPath<Integer, DomainLink> mainPath = possiblePaths.get(0);
+                GraphPath<Integer, DomainLink> failoverPath = possiblePaths.get(1);
+
+                //find ports for nodes of main path
+                findPorts(mainPath, sourceNode, destNode);
+
+                //find failover ports for nodes of main path
+                for (DomainLink link : mainPath.getEdgeList()){
+                    failoverPorts.put(link.getLink().getDestination().getDestNode().getValue(), inputPorts.get(link.getLink().getDestination().getDestNode().getValue()));
+                }
+                failoverPorts.put(sourceNode.getODLNodeID(), Integer.parseInt(failoverPath.getEdgeList().get(0).getLink().getSource().getSourceTp().getValue().split(":")[2]));
+
+                //find in and out ports for nodes of failover path
+                for (DomainLink link : failoverPath.getEdgeList()){
+                    inputPortsFailover.put(link.getLink().getDestination().getDestNode().getValue(), Integer.parseInt(link.getLink().getDestination().getDestTp().getValue().split(":")[2]));
+                    outputPortsFailover.put(link.getLink().getSource().getSourceNode().getValue(), Integer.parseInt(link.getLink().getSource().getSourceTp().getValue().split(":")[2]));
+
+                }
+                inputPortsFailover.put(sourceNode.getODLNodeID(), inputPorts.get(sourceNode.getODLNodeID()));
+                outputPortsFailover.put(destNode.getODLNodeID(), outputPorts.get(destNode.getODLNodeID()));
+
+                //configure the switches of both main and failover path
+                SwitchConfigurator switchConfigurator = new SwitchConfigurator(db);
+                switchConfigurator.configureIngress(sourceNode, inputPorts.get(sourceNode.getODLNodeID()), outputPorts.get(sourceNode.getODLNodeID()), failoverPorts.get(sourceNode.getODLNodeID()));
+                switchConfigurator.configureCoreAndEgress(mainPath.getEdgeList(), inputPorts, outputPorts, failoverPorts);
+            }
+        }
+    }*/
+
+   /* public static List<Link> getAllLinks(DataBroker db) {
         List<Link> linkList = new ArrayList<>();
 
         try {
@@ -448,20 +464,6 @@ public class SqmfImplementation implements SqmfService {
 
             return linkList;
         }
-    }
+    }*/
 
-    public static List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> getNodes(DataBroker db) throws ReadFailedException {
-        List<org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.nodes.Node> nodeList = new ArrayList<>();
-        InstanceIdentifier<Nodes> nodesIid = InstanceIdentifier.builder(
-                Nodes.class).build();
-        ReadOnlyTransaction nodesTransaction = db.newReadOnlyTransaction();
-        CheckedFuture<com.google.common.base.Optional<Nodes>, ReadFailedException> nodesFuture = nodesTransaction
-                .read(LogicalDatastoreType.OPERATIONAL, nodesIid);
-        com.google.common.base.Optional<Nodes> nodesOptional = nodesFuture.checkedGet();
-
-        if (nodesOptional != null && nodesOptional.isPresent()) {
-            nodeList = nodesOptional.get().getNode();
-        }
-        return nodeList;
-    }
 }
