@@ -12,15 +12,14 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeCon
 import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.math.BigInteger;
 import java.security.NoSuchAlgorithmException;
-
 import static org.opendaylight.controller.liblldp.LLDPTLV.CUSTOM_TLV_SUB_TYPE_CUSTOM_SEC;
 import static org.opendaylight.openflowplugin.applications.topology.lldp.utils.LLDPDiscoveryUtils.getValueForLLDPPacketIntegrityEnsuring;
 
 /**
- * Utility class for dealing with LLDP packets. THIS CLASS HAS BEEN FOUND ON :
+ * Utility class for dealing with LLDP packets.
+ * THIS CODE HAS BEEN FOUND ON :
  * https://github.com/opendaylight/openflowplugin/blob/master/applications/lldp-speaker/src/main/java/org/opendaylight/
  * openflowplugin/applications/lldpspeaker/LLDPUtil.java
  */

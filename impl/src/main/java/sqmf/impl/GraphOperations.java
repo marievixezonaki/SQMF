@@ -20,6 +20,9 @@ import java.util.List;
  */
 public class GraphOperations {
 
+    private static final Logger LOG = LoggerFactory.getLogger(TopologyListener.class);
+
+
     /**
      * The method which adds updates the network graph with new links and nodes, when a change in the topology is detected.
      *
@@ -27,8 +30,6 @@ public class GraphOperations {
      * @param linkList      The links to be added to the graph, which the nodes will occur from.
      * @return              The updated graph.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(TopologyListener.class);
-
     public NetworkGraph updateGraph(NetworkGraph graph, List<Link> linkList){
 
         if (graph == null) {
@@ -85,6 +86,8 @@ public class GraphOperations {
         return graph;
     }
 
+
+
     /**
      * The method which adds a new node to the network graph.
      *
@@ -105,6 +108,8 @@ public class GraphOperations {
         return domainNode;
 
     }
+
+
 
     /**
      * The method which removes a list of links from the network graph.

@@ -188,6 +188,32 @@ public class Video {
     }
 
 
+    /**
+     * The method which computes the video bit rate.
+     *
+     * @param videoLocation     The video's absolute path in the file system.
+     * @return                  The video bit rate.
+     */
+    public static float computeVideoBitRate(String videoLocation){
+
+        float bitRate = -1;
+        String command = "ffmpeg -i " + videoLocation + " -hide_banner";
+        ExecuteShellCommand obj = new ExecuteShellCommand();
+        String output = obj.executeCommand(command);
+        if (output != null) {
+            String[] outputParts = output.split(" ");
+            for (int i = 0; i < outputParts.length; i++){
+                if (outputParts[i].contains("bitrate")){
+                    bitRate = Float.parseFloat(outputParts[i+1]);
+                    bitRate = bitRate*1000;
+                    break;
+                }
+            }
+        }
+        return bitRate;
+    }
+
+
 
     /**
      * The method which assigns values to coefficients v1-v12 needed for the video QoE estimation formula, according

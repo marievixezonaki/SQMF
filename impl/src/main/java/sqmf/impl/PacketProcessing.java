@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 /**
  * The class which listens for incoming packets and processes them.
  *
+ * @author Marievi Xezonaki
  */
 public class PacketProcessing implements PacketProcessingListener {
 
@@ -35,6 +36,16 @@ public class PacketProcessing implements PacketProcessingListener {
     public static boolean videoHasStarted = false;
     public static Long videoStartTime = 0L;
 
+
+    /**
+     * The constructor method.
+     *
+     * @param srcNode       The ingress switch of the path.
+     * @param dstNode       The egress switch of the path.
+     * @param srcMac        The source MAC address which the packets to be sent will have.
+     *
+     * @return              The reference.
+     */
     public PacketProcessing(String srcNode, String dstNode, String srcMac) {
         LOG.info("PacketProcessing loaded successfully");
         this.srcNode = srcNode;
@@ -42,6 +53,14 @@ public class PacketProcessing implements PacketProcessingListener {
         this.sourceMac = srcMac;
     }
 
+
+
+    /**
+     * The method which filters the received packets by the controller, keeps the UDP packets and computes
+     * this way the delay and the packet loss of the path.
+     *
+     * @param packetReceived    A packet received by the controller.
+     */
     @Override
     public void onPacketReceived(PacketReceived packetReceived) {
 
@@ -89,6 +108,14 @@ public class PacketProcessing implements PacketProcessingListener {
         }
     }
 
+
+
+    /**
+     * The method which decodes a received packet in order to extract its size.
+     *
+     * @param packetReceived    A packet received by the controller.
+     * @return                  The packet size.
+     */
     public int decode(PacketReceived packetReceived) throws BufferException {
         byte[] data = packetReceived.getPayload();
         try {

@@ -25,15 +25,35 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Future;
 
+/**
+ * The class containing the methods for packet sending, for delay monitoring.
+ *
+ * @author Marievi Xezonaki
+ */
 public class PacketSender {
 
     private PacketProcessingService packetProcessingService;
     public static HashMap<String, Long> sentTimes = new HashMap();
 
+    /**
+     * The constructor method.
+     *
+     * @param packetProcessingService   The service which will enable to send packets for delay monitoring.
+     */
     public PacketSender(PacketProcessingService packetProcessingService){
         this.packetProcessingService = packetProcessingService;
     }
 
+    /**
+     *
+     *
+     * @param outputNodeConnector       The interface where the packet will be sent.
+     * @param nodeId                    The node which will send the packet.
+     * @param srcMac                    The source MAC address which the packets to be sent will have.
+     * @param nextNodeConnector         The interface which will receive the sent packet.
+     *
+     * @return                          True or false, depending on the method's success or not.
+     */
     public boolean sendPacket(String outputNodeConnector, String nodeId, String srcMac, String nextNodeConnector) {
 
         MacAddress srcMacAddress = new MacAddress(srcMac);
@@ -80,6 +100,15 @@ public class PacketSender {
         }
     }
 
+
+
+    /**
+     * The method which creates a reference for a node connector.
+     *
+     * @param node_id       The node where the node connector which the reference will be created for belongs.
+     * @param nodeConnKey   The node connector for which the reference will be created.
+     * @return              The reference.
+     */
     private NodeConnectorRef createNodeConnRef(String node_id, NodeConnectorKey nodeConnKey) {
         InstanceIdentifier<NodeConnector> instanceIdent= InstanceIdentifier.builder(Nodes.class)
                 .child(Node.class, new NodeKey(NodeId.getDefaultInstance(node_id)))
@@ -87,6 +116,15 @@ public class PacketSender {
         return new NodeConnectorRef(instanceIdent);
     }
 
+
+
+    /**
+     * The method which creates a reference for a node.
+     *
+     * @param node_id       The node for which the reference will be created.
+     *
+     * @return              The reference.
+     */
     private NodeRef createNodeRef(String node_id) {
         NodeKey key = new NodeKey(new NodeId(node_id));
         InstanceIdentifier<Node> path = InstanceIdentifier.builder(Nodes.class).child(Node.class, key).build();
