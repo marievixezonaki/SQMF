@@ -44,7 +44,7 @@ public class VoIP {
         double R = 94.2 - 0.024*delay - 0.11*h*(delay-177.3) - 11 - 40*Math.log(1+10*packetLoss);
         double MOS;
         if (R < 0){
-            MOS = 0;
+            MOS = 1;
         }
         else{
             MOS = 1 + 0.035*R + R*(R-60)*(100-R)/1000000;
