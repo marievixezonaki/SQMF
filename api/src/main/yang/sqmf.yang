@@ -22,6 +22,7 @@ module sqmf {
         type enumeration {
             enum "VoIP";
             enum "Video";
+            enum "Web Based Video";
         }
     }
 

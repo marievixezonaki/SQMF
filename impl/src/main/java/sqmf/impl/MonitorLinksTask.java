@@ -35,7 +35,8 @@ public class MonitorLinksTask extends TimerTask{
     private float videoFPS;
     private static Long lastQoEEstimationTime = 0L;
     private int videoCase;
-
+    public static boolean senderLinkDown = false;
+    public static boolean receiverLinkDown = false;
 
     /**
      * The constructor method.
@@ -72,17 +73,33 @@ public class MonitorLinksTask extends TimerTask{
 
         double pathQoE = -1;
 
+        if (senderLinkDown){
+            System.out.println("No QoE computation : sender cannot send any traffic.");
+        }
+
         // if application streamed is VoIP
         if (SqmfImplementation.applicationType.equals(VoIP.getName())){
             Long delay = monitorDelay(SqmfImplementation.mainGraphWalk);
-            double packetLoss = monitorPacketLoss();
+            double packetLoss;
+            if (receiverLinkDown){
+                packetLoss = 1;
+            }
+            else {
+                packetLoss = monitorPacketLoss();
+            }
             System.out.println("Total delay is " + delay + " ms");
             System.out.println("Total loss is " + packetLoss + "%");
             pathQoE = VoIP.estimateQoE(delay, packetLoss);
         }
         // if application streamed is Video
         else if (SqmfImplementation.applicationType.equals(Video.getName())){
-            double packetLoss = monitorPacketLoss();
+            double packetLoss;
+            if (receiverLinkDown){
+                packetLoss = 1;
+            }
+            else {
+                packetLoss = monitorPacketLoss();
+            }
             int bitsReceivedCount = findBits();
             //float frameRate = computeVideoFPS(videoAbsolutePath);
             float frameRate = videoFPS;
@@ -109,6 +126,9 @@ public class MonitorLinksTask extends TimerTask{
             System.out.println("FPS is " + frameRate);
             System.out.println("BR is " + BR);
             System.out.println("PLR is " + packetLoss);
+
+        }
+        else if (SqmfImplementation.applicationType.equals(WebBasedVideo.getName())){
 
         }
 

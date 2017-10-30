@@ -49,11 +49,11 @@ public class GraphOperations {
                 if (graph.getGraphNodes() != null){
                     if (!graph.getGraphNodes().contains(source)){
                         graph.getGraphNodes().add(source);
-                        System.out.println("added graph node with id " + sourceNode.getODLNodeID());
+                        System.out.println("Added graph node with id " + sourceNode.getODLNodeID());
                     }
                     if (!graph.getGraphNodes().contains(dest)){
                         graph.getGraphNodes().add(dest);
-                        System.out.println("added graph node with id " + destNode.getODLNodeID());
+                        System.out.println("Added graph node with id " + destNode.getODLNodeID());
                     }
                 }
                 // if graph's node list is not initialized, initialize it and then add the source and destination nodes
@@ -62,8 +62,8 @@ public class GraphOperations {
                     graph.setGraphNodes(graphNodes);
                     graph.getGraphNodes().add(source);
                     graph.getGraphNodes().add(dest);
-                    System.out.println("added graph node with id " + sourceNode.getODLNodeID());
-                    System.out.println("added graph node with id " + destNode.getODLNodeID());
+                    System.out.println("Added graph node with id " + sourceNode.getODLNodeID());
+                    System.out.println("Added graph node with id " + destNode.getODLNodeID());
                 }
                 //add the domain links
                 DomainLink domainLink = (DomainLink) graph.addEdge(sourceNode.getNodeID(), destNode.getNodeID());
