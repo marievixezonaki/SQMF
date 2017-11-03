@@ -52,7 +52,7 @@ public class SqmfImplementation implements SqmfService {
     private static HashMap<String, Integer> outputPorts = new HashMap<>();
     private static HashMap<String, Integer> failoverPorts = new HashMap<>();
     private static DataBroker db;
-    private static String srcMacForDelayMeasuring = "00:00:00:00:00:09";
+    private static String srcMacForDelayMeasuring = "00:00:00:00:00:03";
     public static String srcNode = null;
     public static String dstNode = null;
     private static RpcProviderRegistry rpcProviderRegistry;
