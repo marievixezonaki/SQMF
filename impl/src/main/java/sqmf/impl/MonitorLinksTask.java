@@ -30,7 +30,7 @@ public class MonitorLinksTask extends TimerTask{
     volatile static boolean packetReceivedFromController = false;
     private static HashMap<String, String> nextNodeConnectors = new HashMap();
     public static boolean isFailover = false;
-    private boolean linkFailure = false;
+    public static boolean linkFailure = false;
     private String videoAbsolutePath;
     private float videoFPS;
     private static Long lastQoEEstimationTime = 0L;
@@ -63,8 +63,6 @@ public class MonitorLinksTask extends TimerTask{
     }
 
 
-
-
     /**
      * The core method of the task, executing the link monitoring.
      */
@@ -75,6 +73,18 @@ public class MonitorLinksTask extends TimerTask{
 
         if (senderLinkDown){
             System.out.println("No QoE computation : sender cannot send any traffic.");
+            return;
+        }
+        if (receiverLinkDown){
+            System.out.println("No QoE computation : receiver cannot receive any traffic.");
+            return;
+        }
+        if (linkFailure){
+            System.out.println("No QoE computation : Changing path as a link failure has occurred.");
+            SqmfImplementation.changePath();
+            linkFailure = false;
+            System.out.println("-----------------------------------------------------------------------------------------------------");
+            return;
         }
 
         // if application streamed is VoIP
@@ -129,7 +139,9 @@ public class MonitorLinksTask extends TimerTask{
 
         }
         else if (SqmfImplementation.applicationType.equals(WebBasedVideo.getName())){
-
+            int numberOfStallings = WebBasedVideo.computeNumberOfStallings();
+            int durationOfStallings = WebBasedVideo.computeDurationOfStallings();
+            pathQoE = WebBasedVideo.estimateTCPVideoQoE(numberOfStallings, durationOfStallings);
         }
 
         System.out.println("QoE is " + pathQoE);

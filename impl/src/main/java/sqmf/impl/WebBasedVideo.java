@@ -23,12 +23,12 @@ public class WebBasedVideo {
     }
 
 
-    public static void computeNumberOfStallings(){
-
+    public static int computeNumberOfStallings(){
+        return 0;
     }
 
-    public static void computeDurationOfStallings(){
-
+    public static int computeDurationOfStallings(){
+        return 0;
     }
 
 

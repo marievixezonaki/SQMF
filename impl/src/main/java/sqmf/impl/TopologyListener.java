@@ -111,6 +111,14 @@ public class TopologyListener implements DataChangeListener {
                    //         System.out.println("100% packet loss even if QoE in path > threshold.");
                         }
                     }
+                    else {
+                        for (DomainLink dl : SqmfImplementation.mainGraphWalk.getEdgeList()){
+                            if (dl.getLink().getLinkId().getValue().equals(link.getLinkId().getValue())){
+                                //main path contains the link which failed
+                                MonitorLinksTask.linkFailure = true;
+                            }
+                        }
+                    }
                 }
             }
             //remove the removed links from the domain graph
