@@ -21,7 +21,7 @@ module sqmf {
     typedef ApplicationType {
         type enumeration {
             enum "VoIP";
-            enum "Video";
+            enum "UDP Video";
             enum "Web Based Video";
         }
     }

@@ -22,7 +22,7 @@ public class UDPVideo implements Video{
      * @return      The application type's name.
      */
     public static String getName(){
-        return "Video";
+        return "UDP Video";
     }
 
 
@@ -101,7 +101,8 @@ public class UDPVideo implements Video{
                 }
             }
         }
-        return -1;    }
+        return -1;
+    }
 
     /**
      * The method which computes video's format.

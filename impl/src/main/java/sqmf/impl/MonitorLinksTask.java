@@ -82,13 +82,13 @@ public class MonitorLinksTask extends TimerTask{
             System.out.println("No QoE computation : receiver cannot receive any traffic.");
             return;
         }
-     /*   if (linkFailure){
+        if (linkFailure){
             System.out.println("No QoE computation : Changing path as a link failure has occurred.");
             SqmfImplementation.changePath();
             linkFailure = false;
             System.out.println("-----------------------------------------------------------------------------------------------------");
             return;
-        }*/
+        }
 
         // if application streamed is VoIP
         if (SqmfImplementation.applicationType.equals(VoIP.getName())){
@@ -144,7 +144,7 @@ public class MonitorLinksTask extends TimerTask{
         }
         // if application streamed is TCP Video
         else if (SqmfImplementation.applicationType.equals(WebBasedVideo.getName())){
-            numberOfStallings = 0;
+        //    numberOfStallings = 0;
             numberOfStallings = WebBasedVideo.computeNumberOfStallings();
             System.out.println("Number of stallings : " + numberOfStallings);
             int durationOfStallings = WebBasedVideo.computeDurationOfStallings();

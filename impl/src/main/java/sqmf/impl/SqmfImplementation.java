@@ -179,8 +179,12 @@ public class SqmfImplementation implements SqmfService {
 
         //check what category video belongs to
         int keyFrame = UDPVideo.getKeyFrame(videoAbsolutePath);
+        System.out.println("The video has key frame: " + keyFrame);
         String codec = UDPVideo.getVideoCodec(videoAbsolutePath);
+        System.out.println("The video has codec: " + codec);
         String format = UDPVideo.getVideoFormat(videoAbsolutePath);
+        System.out.println("The video has format: " + format);
+
         if ((keyFrame == -1) || (codec == null) || (format == null)){
             return 0;
         }
