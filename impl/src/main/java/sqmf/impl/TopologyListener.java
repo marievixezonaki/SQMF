@@ -73,17 +73,17 @@ public class TopologyListener implements DataChangeListener {
                     Link link = (Link) createdData.get(dataElement);
                     if (!linkList.contains(link)) {
                         linkList.add(link);
-                        LOG.info("Added link " + link.getKey().getLinkId().getValue() + " from " + link.getSource().getSourceNode().getValue() + " to " + link.getDestination().getDestNode().getValue());
+                        System.out.println("Added link " + link.getKey().getLinkId().getValue() + " from " + link.getSource().getSourceNode().getValue() + " to " + link.getDestination().getDestNode().getValue());
                     }
 
-                    if (link.getLinkId().getValue().contains("host")){
+                 /*   if (link.getLinkId().getValue().contains("host")){
                         if (link.getLinkId().getValue().contains(SqmfImplementation.srcNode)){
                             MonitorLinksTask.senderLinkDown = false;
                         }
                         else if (link.getLinkId().getValue().contains(SqmfImplementation.dstNode)){
                             MonitorLinksTask.receiverLinkDown = false;
                         }
-                    }
+                    }*/
                 }
             }
             //update the domain graph with the added links
@@ -102,14 +102,14 @@ public class TopologyListener implements DataChangeListener {
 
                     if (link.getLinkId().getValue().contains("host")){
                         //either the link from the sender (--> no QoE) or the link from the receiver (100% loss) is down
-                        if (link.getLinkId().getValue().contains(SqmfImplementation.srcNode)){
+             /*           if (link.getLinkId().getValue().contains(SqmfImplementation.srcNode)){
                             MonitorLinksTask.senderLinkDown = true;
                        //     System.out.println("No QoE can be computed because sender's link is down --> no traffic sent.");
                         }
                         else if (link.getLinkId().getValue().contains(SqmfImplementation.dstNode)){
                             MonitorLinksTask.receiverLinkDown = true;
                    //         System.out.println("100% packet loss even if QoE in path > threshold.");
-                        }
+                        }*/
                     }
                     else {
                         for (DomainLink dl : SqmfImplementation.mainGraphWalk.getEdgeList()){

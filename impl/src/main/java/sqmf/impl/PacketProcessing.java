@@ -35,7 +35,7 @@ public class PacketProcessing implements PacketProcessingListener {
     private int udpPacketSize;
     public static boolean videoHasStarted = false;
     public static Long videoStartTime = 0L;
-
+    public static volatile int buffer = 0;
 
     /**
      * The constructor method.
@@ -93,6 +93,18 @@ public class PacketProcessing implements PacketProcessingListener {
                 egressUdpPackets++;
                 totalOutPackets++;
                 egressBits += udpPacketSize;
+            }
+            else if (switchWhichReceivedPacket.equals(SqmfImplementation.mainGraphWalk.getEdgeList().get(SqmfImplementation.mainGraphWalk.getEdgeList().size() - 2).getLink().getDestination().getDestNode().getValue())){
+                //this is the egress switch
+                System.out.println("This is the previous from the egress switch, " + switchWhichReceivedPacket);
+                buffer++;
+
+            }
+            else if (switchWhichReceivedPacket.equals(SqmfImplementation.mainGraphWalk.getEdgeList().get(SqmfImplementation.mainGraphWalk.getEdgeList().size() - 1).getLink().getDestination().getDestNode().getValue())){
+                //this is the egress switch
+                System.out.println("This is the egress switch, " + switchWhichReceivedPacket);
+                buffer--;
+
             }
         }
 

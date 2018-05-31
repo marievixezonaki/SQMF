@@ -9,6 +9,8 @@ import org.jgrapht.GraphPath;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.sal.binding.api.RpcProviderRegistry;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.packet.service.rev130709.PacketProcessingService;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.impl.rev141210.Sqmf;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +39,7 @@ public class MonitorLinksTask extends TimerTask{
     private int videoCase;
     public static boolean senderLinkDown = false;
     public static boolean receiverLinkDown = false;
+    public static int numberOfStallings = 0;
 
     /**
      * The constructor method.
@@ -79,13 +82,13 @@ public class MonitorLinksTask extends TimerTask{
             System.out.println("No QoE computation : receiver cannot receive any traffic.");
             return;
         }
-        if (linkFailure){
+     /*   if (linkFailure){
             System.out.println("No QoE computation : Changing path as a link failure has occurred.");
             SqmfImplementation.changePath();
             linkFailure = false;
             System.out.println("-----------------------------------------------------------------------------------------------------");
             return;
-        }
+        }*/
 
         // if application streamed is VoIP
         if (SqmfImplementation.applicationType.equals(VoIP.getName())){
@@ -102,7 +105,8 @@ public class MonitorLinksTask extends TimerTask{
             pathQoE = VoIP.estimateQoE(delay, packetLoss);
         }
         // if application streamed is Video
-        else if (SqmfImplementation.applicationType.equals(Video.getName())){
+        else if (SqmfImplementation.applicationType.equals(UDPVideo.getName())){
+            UDPVideo udpVideo = new UDPVideo();
             double packetLoss;
             if (receiverLinkDown){
                 packetLoss = 1;
@@ -114,7 +118,7 @@ public class MonitorLinksTask extends TimerTask{
             //float frameRate = computeVideoFPS(videoAbsolutePath);
             float frameRate = videoFPS;
             float N = computeN(frameRate);
-            float BR = Video.computeVideoBitRate(videoAbsolutePath);
+            float BR = udpVideo.computeVideoBitRate(videoAbsolutePath);
 
             float bitRate;
          /*   if (frameRate != -1 && N != -1) {
@@ -130,7 +134,7 @@ public class MonitorLinksTask extends TimerTask{
                 BR = 0;
             }
             if (frameRate != -1){
-                pathQoE = Video.estimateQoE(frameRate, BR, packetLoss, videoCase);
+                pathQoE = UDPVideo.estimateUDPVideoQoE(frameRate, BR, packetLoss, videoCase);
             }
 
             System.out.println("FPS is " + frameRate);
@@ -138,10 +142,13 @@ public class MonitorLinksTask extends TimerTask{
             System.out.println("PLR is " + packetLoss);
 
         }
+        // if application streamed is TCP Video
         else if (SqmfImplementation.applicationType.equals(WebBasedVideo.getName())){
-            int numberOfStallings = WebBasedVideo.computeNumberOfStallings();
+            numberOfStallings = 0;
+            numberOfStallings = WebBasedVideo.computeNumberOfStallings();
+            System.out.println("Number of stallings : " + numberOfStallings);
             int durationOfStallings = WebBasedVideo.computeDurationOfStallings();
-            pathQoE = WebBasedVideo.estimateTCPVideoQoE(numberOfStallings, durationOfStallings);
+       //     pathQoE = WebBasedVideo.estimateQoE(numberOfStallings, durationOfStallings);
         }
 
         System.out.println("QoE is " + pathQoE);

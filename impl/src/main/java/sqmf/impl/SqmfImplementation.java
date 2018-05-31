@@ -27,17 +27,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 //import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
 //import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.sqmf.rev141210.StartFailoverInput;
-import sun.nio.ch.Net;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
-import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
-import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.inventory.rev130819.Nodes;
-import com.google.common.util.concurrent.CheckedFuture;
+
 
 /**
  * The core class of the implementation.
@@ -116,7 +106,7 @@ public class SqmfImplementation implements SqmfService {
         }
 
         // if the application type is video, launch a file chooser to select a video file to be streamed
-        if (applicationType.equals(Video.getName())){
+        if (applicationType.equals(UDPVideo.getName())){
             FileDialog dialog = new FileDialog((Frame)null, "Select File to Open");
             dialog.setMode(FileDialog.LOAD);
             dialog.setVisible(true);
@@ -171,7 +161,7 @@ public class SqmfImplementation implements SqmfService {
 
         //finally, start monitoring links
         timer = new Timer();
-        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath, Video.getVideoFPS(videoAbsolutePath), videoCase);
+        monitorLinksTask = new MonitorLinksTask(db, rpcProviderRegistry, srcMacForDelayMeasuring, videoAbsolutePath, UDPVideo.getVideoFPS(videoAbsolutePath), videoCase);
         timer.schedule(monitorLinksTask, 0, 5000);
 
         return Futures.immediateFuture(RpcResultBuilder.<Void>success().build());
@@ -188,9 +178,9 @@ public class SqmfImplementation implements SqmfService {
     public int findVideoCase(String videoAbsolutePath){
 
         //check what category video belongs to
-        int keyFrame = Video.getKeyFrame(videoAbsolutePath);
-        String codec = Video.getVideoCodec(videoAbsolutePath);
-        String format = Video.getVideoFormat(videoAbsolutePath);
+        int keyFrame = UDPVideo.getKeyFrame(videoAbsolutePath);
+        String codec = UDPVideo.getVideoCodec(videoAbsolutePath);
+        String format = UDPVideo.getVideoFormat(videoAbsolutePath);
         if ((keyFrame == -1) || (codec == null) || (format == null)){
             return 0;
         }
@@ -273,8 +263,10 @@ public class SqmfImplementation implements SqmfService {
         List<Link> graphLinks = NetworkGraph.getInstance().getGraphLinks();
         Boolean isSourceEdge = false, isDestEdge = false;
 
+        System.out.println("Source " + sourceNode.getODLNodeID() + " dest " + destNode.getODLNodeID());
         //check if graph links containing "host" also contain the source or destination node
         for (Link graphLink : graphLinks){
+            System.out.println(graphLink.getLinkId().getValue());
             if (graphLink.getLinkId().getValue().contains("host")){
                 if (graphLink.getLinkId().getValue().contains(destNode.getODLNodeID())){
                     isDestEdge = true;

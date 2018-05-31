@@ -10,8 +10,9 @@ package sqmf.impl;
  *
  * @author Marievi Xezonaki
  */
-public class WebBasedVideo {
+public class WebBasedVideo implements Video{
 
+    public static volatile int stallingsNum = 0;
 
     /**
      * The method which returns the application type's name (video).
@@ -22,9 +23,16 @@ public class WebBasedVideo {
         return "Web Based Video";
     }
 
+    public static double estimateQoE(int numberOfStallings, int durationOfStallings) {
+        return 0;
+    }
+
 
     public static int computeNumberOfStallings(){
-        return 0;
+        if (PacketProcessing.buffer < 0){
+            stallingsNum++;
+        }
+        return stallingsNum;
     }
 
     public static int computeDurationOfStallings(){
