@@ -40,6 +40,7 @@ public class MonitorLinksTask extends TimerTask{
     public static boolean senderLinkDown = false;
     public static boolean receiverLinkDown = false;
     public static int numberOfStallings = 0;
+    private float pingTime = 0.1078f;
 
     /**
      * The constructor method.
@@ -92,7 +93,7 @@ public class MonitorLinksTask extends TimerTask{
 
         // if application streamed is VoIP
         if (SqmfImplementation.applicationType.equals(VoIP.getName())){
-            Long delay = monitorDelay(SqmfImplementation.mainGraphWalk);
+            float delay = monitorDelay(SqmfImplementation.mainGraphWalk);
             double packetLoss;
             if (receiverLinkDown){
                 packetLoss = 1;
@@ -177,8 +178,8 @@ public class MonitorLinksTask extends TimerTask{
      * @param path      The path whose links will be monitored.
      * @return          The computed delay.
      */
-    private Long monitorDelay(GraphPath<Integer, DomainLink> path){
-
+    private float monitorDelay(GraphPath<Integer, DomainLink> path){
+        int numberOfLinks = 0;
         if (rpcProviderRegistry != null) {
             packetProcessingService = rpcProviderRegistry.getRpcService(PacketProcessingService.class);
 
@@ -193,6 +194,7 @@ public class MonitorLinksTask extends TimerTask{
                     linkFailure = true;
                 }
                 if (!link.getLink().getLinkId().getValue().contains("host") && NetworkGraph.getInstance().getGraphLinks().contains(link.getLink())) {
+                    numberOfLinks++;
                     Long latency = latencyMonitor.MeasureNextLink(link.getLink(), sourceMac, nextNodeConnectors.get(link.getLink().getSource().getSourceNode().getValue()));
                     while (packetReceivedFromController == false){
 
@@ -201,12 +203,16 @@ public class MonitorLinksTask extends TimerTask{
                 }
             }
         }
-        Long totalDelay = 0L;
+        float totalDelay = 0L;
         //compute path's total delay
         if (latencies.size() > 0){
             totalDelay = computeTotalDelay(latencies);
         }
         latencies.clear();
+        
+        /* SUBTRACT the time required for communication between controller and switches,
+           so as to keep only the links' delay */
+        totalDelay = totalDelay - pingTime*numberOfLinks*2;
         return totalDelay;
     }
 

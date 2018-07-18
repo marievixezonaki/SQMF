@@ -33,7 +33,7 @@ public class VoIP {
      * @param packetLoss    The computed packet loss (%).
      * @return              The computed QoE value.
      */
-    public static double estimateQoE(Long delay, double packetLoss) {
+    public static double estimateQoE(float delay, double packetLoss) {
         int h;
         if (delay - 177.3 > 0){
             h = 1;
